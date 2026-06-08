@@ -13,9 +13,6 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
 
-@app.route("/")
-def home():
-    return send_from_directory(FRONTEND_FOLDER, "index.html")
 
 # ==========================
 # WEBSITE ROUTES
@@ -61,6 +58,14 @@ def reports():
 def chatbot():
     return send_from_directory(FRONTEND_FOLDER, 'chatbot.html')
 
+@app.route("/debug")
+def debug():
+    return jsonify({
+        "base_dir": BASE_DIR,
+        "frontend_folder": FRONTEND_FOLDER,
+        "exists": os.path.exists(FRONTEND_FOLDER),
+        "files": os.listdir(FRONTEND_FOLDER) if os.path.exists(FRONTEND_FOLDER) else []
+    })
 # ==========================
 # STATIC FILES
 # ==========================
