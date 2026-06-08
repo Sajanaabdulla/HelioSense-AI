@@ -317,9 +317,9 @@ if __name__ == "__main__":
 
     print("\n" + "="*60)
     print("HelioSense AI Running")
-    print("Home       : http://127.0.0.1:5000")
-    print("Prediction : http://127.0.0.1:5000/prediction")
-    print("Health     : http://127.0.0.1:5000/health")
+    print("Home       : http://https://heliosense-ai.onrender.com")
+    print("Prediction : http://https://heliosense-ai.onrender.com/prediction")
+    print("Health     : http://https://heliosense-ai.onrender.com/health")
     print("="*60 + "\n")
 
     app.run(

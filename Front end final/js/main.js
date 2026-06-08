@@ -598,7 +598,9 @@ function initSolarPrediction() {
         console.log("Weather data fetched:", { city, latitude, longitude, temperature, humidity, wind_speed });
 
         // Send to backend prediction API
-        const predictionResponse = await fetch("/predict-solar", {
+        const predictionResponse = await fetch(
+         "https://heliosense-ai.onrender.com/predict-solar",
+        {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -608,8 +610,8 @@ function initSolarPrediction() {
             humidity,
             wind_speed
           })
-        });
-
+        }
+       );
         if (!predictionResponse.ok) {
           throw new Error(`Prediction API error: ${predictionResponse.status}`);
         }
