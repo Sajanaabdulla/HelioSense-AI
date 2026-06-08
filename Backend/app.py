@@ -338,3 +338,8 @@ if __name__ == "__main__":
         debug=True,
         use_reloader=False
     )
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = (
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+)
