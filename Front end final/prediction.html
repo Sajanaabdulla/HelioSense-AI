@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Prediction | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/index" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy-usage">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item nav-item--active" href="/prediction">
+<span class="material-symbols-outlined icon-filled">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<header class="app-header">
+<div class="app-header__inner">
+<div class="flex items-center gap-6">
+<a class="btn-home" href="/index">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+<div>
+<span class="page-eyebrow text-label">Prediction</span>
+<h2 class="text-headline text-accent">Solar Yield Prediction</h2>
+</div>
+</div>
+<div class="user-profile">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<span class="material-symbols-outlined text-accent">person</span>
+</div>
+<span class="text-label text-bold hidden-mobile">Student User</span>
+</div>
+</div>
+</header>
+
+<main class="page-content space-y-8">
+<div class="prediction-banner glass-card">
+<img alt="Solar farm at sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvpLlZ3BETplFYsAf4uS8GFRUWIwW5lr2F1HNul7hjnP7dIeF4qTyz7-64aqW3l5ogmwAAOcpYIQ7-DMrJCCBrfYMuzXX4RUFO9eF02-dd0e0-IRJ24-39rYFoCIRhSY8znD6kBp--5JOztztlxK9gjy8T-wFslrKOU1VdJQ7ntkfiA3cDldqOLBdNdfcYMUi2aaBIc0XPwP5dRoH1rMZdUYadoDaakF7BM2yLLkxDzR9HbmEV1aLRJgKQi0d3PJuS1SsVR82yeccl"/>
+<div class="prediction-banner__overlay"></div>
+<div class="prediction-banner__content">
+<span class="badge badge--accent text-uppercase text-xs">Live Analysis</span>
+<h1 class="text-display text-primary mt-2">Energy Generation Forecast</h1>
+<p class="text-body-lg text-muted mt-2 max-w-xl">AI models predict annual solar output based on rooftop analysis and localized weather data.</p>
+</div>
+</div>
+<!-- SOLAR PREDICTION INPUT CARD -->
+
+<div class="card glass-card prediction-input-card">
+
+    <h3 class="text-headline text-accent">
+        Solar Prediction Factors
+    </h3>
+
+    <p class="text-muted">
+        Choose a location for solar analysis.
+    </p>
+
+    <div class="location-actions">
+        <button id="manualLocationBtn" class="location-btn">
+            🔍 Enter Location
+        </button>
+
+        <button id="locationBtn" class="btn btn-location">
+            📍 Use Live Location
+        </button>
+    </div>
+
+    <!-- Manual Location Input Section -->
+    <div id="manualLocationContainer" style="display:none;margin-top:20px;">
+        <input
+            type="text"
+            id="cityInput"
+            list="cityList"
+            placeholder="Search Location (e.g. Kochi)"
+            class="location-input"
+            autocomplete="off"
+        >
+        <datalist id="cityList">
+            <option value="Kochi">
+            <option value="Kollam">
+            <option value="Thiruvananthapuram">
+            <option value="Kozhikode">
+            <option value="Mumbai">
+            <option value="Delhi">
+            <option value="Bangalore">
+            <option value="Chennai">
+            <option value="Hyderabad">
+        </datalist>
+    </div>
+
+    <!-- Selected Location Display -->
+    <div id="selectedLocation" style="display:none;margin-top:20px;">
+        <span class="text-label">Selected Location:</span>
+        <span id="selectedCityName" class="text-accent text-bold"></span>
+    </div>
+
+    <!-- Analyze Button -->
+    <button
+        id="predictBtn"
+        class="btn btn--primary btn--lg solar-glow"
+        style="display:none;margin-top:20px;">
+        Analyze Solar Potential
+    </button>
+
+</div>
+<div class="prediction-grid prediction-grid--metrics">
+<div class="card glass-card prediction-col-4 solar-glow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-headline">Potential Score</h3>
+<p class="text-label text-muted">Site Viability Index</p>
+</div>
+<span class="material-symbols-outlined text-accent icon-lg">wb_sunny</span>
+</div>
+<div class="gauge-wrap">
+<div class="gauge">
+<svg viewBox="0 0 160 160">
+<circle cx="80" cy="80" r="70" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="12"/>
+<circle cx="80" cy="80" r="70" fill="transparent" stroke="#facc15" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="66"/>
+</svg>
+<div class="gauge__value">
+<span id="potentialScore" class="text-4xl text-bold">91</span>
+<span class="text-label text-muted text-uppercase">Optimal</span>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between text-label">
+<span class="text-muted">Irradiance Peak</span>
+<span class="text-mono text-accent">1,240 W/m²</span>
+</div>
+<div class="progress progress--thin"><div class="progress__fill progress__fill--accent w-85"></div></div>
+</div>
+</div>
+
+<div class="card glass-card prediction-col-8">
+<div class="flex justify-between items-end mb-8">
+<div>
+<h3 id="annualProjection">4200</h3>
+<p class="text-label text-muted">Expected MWh yield by year</p>
+</div>
+</div>
+<div class="chart-bars-row">
+<div class="prediction-chart-bar"><div class="prediction-chart-bar__col prediction-chart-bar__col--secondary-20" style="height:40%"></div><span class="chart-label">2021</span></div>
+<div class="prediction-chart-bar"><div class="prediction-chart-bar__col prediction-chart-bar__col--secondary-30" style="height:55%"></div><span class="chart-label">2022</span></div>
+<div class="prediction-chart-bar"><div class="prediction-chart-bar__col prediction-chart-bar__col--secondary-40" style="height:70%"></div><span class="chart-label">2023</span></div>
+<div class="prediction-chart-bar"><div class="prediction-chart-bar__col prediction-chart-bar__col--accent" style="height:90%"></div><span class="chart-label text-accent text-bold">2024*</span></div>
+</div>
+</div>
+</div>
+
+<div class="prediction-extra-grid">
+<div class="prediction-metric-card glass-card">
+<span class="material-symbols-outlined text-accent icon-lg">wb_sunny</span>
+<p class="text-label text-muted mt-4">Peak Sun Hours</p>
+<h4 id="peakSunHours">5.4 Hours/Day</h4>
+<p class="desc">Average Daily Sunlight Availability</p>
+</div>
+<div class="prediction-metric-card glass-card">
+<span class="material-symbols-outlined text-accent icon-lg">solar_power</span>
+<p class="text-label text-muted mt-4">Recommended Solar Capacity</p>
+<h4 id="solarCapacity">3 kW</h4>
+<p class="desc">Recommended System</p>
+</div>
+<div class="prediction-metric-card glass-card">
+<span class="material-symbols-outlined text-accent icon-lg">grid_view</span>
+<p class="text-label text-muted mt-4">Recommended Panel Count</p>
+<h4 id="panelCount">8 Panels</h4>
+<p class="desc">Solar Panels</p>
+</div>
+<div class="prediction-metric-card glass-card">
+<span class="material-symbols-outlined text-green icon-lg">percent</span>
+<p class="text-label text-muted mt-4">Energy Coverage</p>
+<h4 id="energyCoverage">96%</h4>
+<p class="desc">of Current Consumption Covered</p>
+</div>
+</div>
+</main>
+
+<footer class="app-footer">
+<div class="footer-inner" style="justify-content:center">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</div>
+<script src="js/main.js"></script>
+</body>
+</html>
+

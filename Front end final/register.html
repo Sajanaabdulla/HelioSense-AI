@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Register | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="auth-page">
+
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+<div class="floating-orb floating-orb--primary"></div>
+<div class="floating-orb floating-orb--secondary"></div>
+</div>
+
+<header class="auth-topbar">
+<a class="auth-topbar__brand" href="/">
+<span class="material-symbols-outlined icon-filled">solar_power</span>
+HelioSense AI
+</a>
+<a class="text-label text-muted" href="/login">Already have an account? Log In</a>
+</header>
+
+<main class="auth-main" style="padding-top:96px">
+<div class="auth-card auth-card--wide glass-card">
+<div class="auth-header text-center">
+<h1 class="text-display mb-2">Create Account</h1>
+<p class="text-body text-muted">Register to start analyzing rooftop solar potential.</p>
+</div>
+
+<form action="/dashboard" method="GET" class="space-y-6">
+<div class="input-field">
+<label class="text-label text-muted text-uppercase" for="full_name">Full Name</label>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">person</span>
+<input class="form-input" id="full_name" name="full_name" type="text" placeholder="John Doe" required/>
+</div>
+</div>
+
+<div class="input-field">
+<label class="text-label text-muted text-uppercase" for="email">Email Address</label>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">mail</span>
+<input class="form-input" id="email" name="email" type="email" placeholder="john@university.edu" required/>
+</div>
+</div>
+
+<div class="input-field">
+<label class="text-label text-muted text-uppercase" for="password">Password</label>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">lock</span>
+<input class="form-input" id="password" name="password" type="password" placeholder="••••••••" required/>
+</div>
+</div>
+
+<div class="input-field">
+<label class="text-label text-muted text-uppercase" for="confirm_password">Confirm Password</label>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">security</span>
+<input class="form-input" id="confirm_password" name="confirm_password" type="password" placeholder="••••••••" required/>
+</div>
+</div>
+
+<div class="form-checkbox">
+<input id="terms" type="checkbox" required/>
+<label class="text-label text-muted" for="terms">
+I agree to the <a class="text-accent" href="#">Terms of Service</a> and <a class="text-accent" href="#">Privacy Policy</a>.
+</label>
+</div>
+
+<button class="btn btn--primary btn--lg btn--full solar-glow shimmer" type="submit">
+Register
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</form>
+</div>
+</main>
+
+<footer class="app-footer mt-auto">
+<div class="footer-inner">
+<p class="text-label text-muted opacity-60">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+
+</body>
+</html>

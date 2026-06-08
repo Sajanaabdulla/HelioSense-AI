@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Energy Usage Analysis | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item nav-item--active" href="/energy">
+<span class="material-symbols-outlined icon-filled">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<header class="app-header">
+<div class="app-header__inner">
+<div class="flex items-center gap-6">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+<div>
+<span class="page-eyebrow text-label">Energy Usage</span>
+<h2 class="text-headline text-accent">Energy Usage Analysis</h2>
+</div>
+</div>
+<div class="user-profile">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<span class="material-symbols-outlined text-accent">person</span>
+</div>
+<span class="text-label text-bold hidden-mobile">Student User</span>
+</div>
+</div>
+</header>
+
+<main class="page-content space-y-8">
+<p class="text-body text-muted">Analyze electricity consumption and recommend optimal solar capacity for your property.</p>
+
+<div class="energy-tabs">
+<button class="energy-tab energy-tab--active" type="button" data-tab="upload">Upload KSEB Bill</button>
+<button class="energy-tab" type="button" data-tab="manual">Manual Entry</button>
+</div>
+
+<div class="energy-panel energy-panel--active" id="panel-upload">
+<div class="card card--lg glass-card">
+<h3 class="text-headline mb-2">Upload KSEB Bill</h3>
+<p class="text-body text-muted mb-6">Upload your Kerala State Electricity Board bill for automated consumption analysis.</p>
+<div class="bill-upload-zone mb-6" id="bill-drop-zone">
+<span class="material-symbols-outlined text-accent" style="font-size:48px;margin-bottom:16px">receipt_long</span>
+<p class="text-body text-muted mb-2">Drag and drop your KSEB bill here</p>
+<p class="text-label text-muted" id="bill-file-name">No file selected</p>
+</div>
+<input class="hidden" id="bill-file-input" type="file" accept=".pdf,.jpg,.jpeg,.png"/>
+<div class="page-actions">
+<button class="btn btn--outline btn--md flex-1" id="choose-bill-btn" type="button">
+<span class="material-symbols-outlined">folder_open</span>
+Choose Bill
+</button>
+<button class="btn btn--outline btn--md flex-1" id="upload-bill-btn" type="button">
+<span class="material-symbols-outlined">cloud_upload</span>
+Upload Bill
+</button>
+<button class="btn btn--primary btn--md flex-1 solar-glow" id="analyze-bill-btn" type="button">
+<span class="material-symbols-outlined icon-filled">analytics</span>
+Analyze Bill
+</button>
+</div>
+</div>
+</div>
+
+<div class="energy-panel" id="panel-manual">
+<div class="card card--lg glass-card">
+<h3 class="text-headline mb-2">Manual Entry</h3>
+<p class="text-body text-muted mb-6">Enter your monthly electricity consumption details manually.</p>
+<div class="space-y-6" style="max-width:480px">
+<div class="input-field">
+<label class="text-label text-muted" for="monthly-kwh">Monthly Electricity Consumption (kWh)</label>
+<input class="form-input mt-2" id="monthly-kwh" type="number" placeholder="e.g. 300" min="0"/>
+</div>
+<div class="input-field">
+<label class="text-label text-muted" for="monthly-bill">Average Monthly Bill Amount (₹)</label>
+<input class="form-input mt-2" id="monthly-bill" type="number" placeholder="e.g. 2500" min="0"/>
+</div>
+<div class="page-actions">
+<button class="btn btn--primary btn--md flex-1 solar-glow" id="calculate-btn" type="button">
+<span class="material-symbols-outlined">calculate</span>
+Calculate Requirement
+</button>
+<button class="btn btn--outline btn--md flex-1" id="reset-btn" type="button">
+<span class="material-symbols-outlined">restart_alt</span>
+Reset
+</button>
+</div>
+</div>
+</div>
+</div>
+
+<section class="energy-output-grid" id="energy-output">
+<div class="energy-output-card glass-card energy-output-card--hidden" id="out-capacity">
+<p class="text-label text-muted">Recommended Solar Capacity</p>
+<h4 id="val-capacity">3 kW System</h4>
+</div>
+<div class="energy-output-card glass-card energy-output-card--hidden" id="out-panels">
+<p class="text-label text-muted">Estimated Solar Panels</p>
+<h4 id="val-panels">6 Panels</h4>
+</div>
+<div class="energy-output-card glass-card energy-output-card--hidden" id="out-monthly">
+<p class="text-label text-muted">Expected Monthly Generation</p>
+<h4 id="val-monthly">360 kWh/month</h4>
+</div>
+<div class="energy-output-card glass-card energy-output-card--hidden" id="out-annual">
+<p class="text-label text-muted">Annual Generation</p>
+<h4 id="val-annual">4320 kWh/year</h4>
+</div>
+<div class="energy-output-card glass-card energy-output-card--hidden" id="out-savings">
+<p class="text-label text-muted">Estimated Annual Savings</p>
+<h4 id="val-savings">₹18,000/year</h4>
+</div>
+</section>
+</main>
+
+<footer class="app-footer">
+<div class="footer-inner" style="justify-content:center">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

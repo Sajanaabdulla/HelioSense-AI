@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Analysis | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item nav-item--active" href="/analysis">
+<span class="material-symbols-outlined icon-filled">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<main class="page-content page-content--no-header">
+<header class="page-header">
+<div>
+<h2 class="text-display text-accent">Rooftop Analysis</h2>
+<p class="text-body-lg text-muted">AI-powered solar mapping and panel placement recommendation.</p>
+</div>
+<div class="page-header__actions">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+<div class="live-badge glass-panel">
+<span class="status-dot"></span>
+<span class="text-label text-uppercase">AI Engine Active</span>
+</div>
+</div>
+</header>
+<div class="card glass-panel mb-6" style="padding:20px;">
+    <div class="flex justify-between items-center">
+        <div>
+            <h3 class="text-headline">📍 Location-Based Analysis</h3>
+            <p class="text-muted">
+                Detect your current location and perform rooftop analysis.
+            </p>
+        </div>
+
+        <button class="btn btn--primary" onclick="getLocation()">
+            <span class="material-symbols-outlined">my_location</span>
+            Detect Location
+        </button>
+    </div>
+
+    <div id="locationResult" style="margin-top:15px;"></div>
+</div>
+<section class="action-bar glass-panel mb-6">
+<button class="btn btn--outline btn--md flex-1" id="upload-btn" type="button">
+<span class="material-symbols-outlined">cloud_upload</span>
+Upload Image
+</button>
+<button class="btn btn--primary btn--md flex-1 solar-glow" id="analyze-btn" type="button">
+<span class="material-symbols-outlined icon-filled">bolt</span>
+Analyze Rooftop
+</button>
+<button class="btn btn--outline btn--md flex-1" id="download-btn" type="button">
+<span class="material-symbols-outlined">download</span>
+Download Result
+</button>
+<input class="hidden" id="file-input" type="file" accept="image/*"/>
+</section>
+
+<div class="analysis-layout">
+<div class="flex flex-col gap-6">
+<div class="drop-zone glass-panel flex-1" id="drop-zone">
+<div class="drop-zone__overlay"></div>
+<div class="relative z-10 flex flex-col items-center text-center">
+<div class="upload-icon">
+<span class="material-symbols-outlined" style="font-size:48px">cloud_upload</span>
+</div>
+<h3 class="text-headline mb-2">Drop Rooftop Imagery</h3>
+<p class="text-muted mb-8 max-w-sm">Upload satellite, drone, or blueprint images (.JPG, .PNG, max 50MB)</p>
+<p class="text-muted text-sm" id="file-name">No file selected</p>
+</div>
+<div class="drop-zone__line"></div>
+</div>
+</div>
+
+<div class="flex flex-col gap-6">
+<div class="grid-2">
+<div class="card glass-panel">
+<p class="text-label text-muted mb-1">Roof Area</p>
+<h4 class="text-3xl text-bold text-accent">60 m²</h4>
+<div class="progress progress--thin mt-4"><div class="progress__fill progress__fill--accent w-80"></div></div>
+</div>
+<div class="card glass-panel">
+<p class="text-label text-muted mb-1">Usable Area</p>
+<h4 class="text-3xl text-bold text-secondary">45 m²</h4>
+<div class="progress progress--thin mt-4"><div class="progress__fill progress__fill--secondary w-75"></div></div>
+</div>
+</div>
+
+<div class="card card--lg glass-panel flex-1">
+<div class="flex justify-between items-center mb-8">
+<h3 class="text-headline">Spatial Intelligence</h3>
+<span class="badge badge--success">Calculated</span>
+</div>
+<div class="space-y-6">
+<div class="detail-row">
+<div class="detail-row__left"><span class="material-symbols-outlined text-secondary">wb_sunny</span> Shade Risk</div>
+<span class="badge badge--success">LOW</span>
+</div>
+<div class="detail-row">
+<div class="detail-row__left"><span class="material-symbols-outlined text-accent">explore</span> Best Placement</div>
+<span class="text-bold">South-West Section</span>
+</div>
+<div class="detail-row">
+<div class="detail-row__left"><span class="material-symbols-outlined text-tertiary-bright">architecture</span> Average Pitch</div>
+<span class="text-bold">22.5°</span>
+</div>
+<div class="detail-row">
+<div class="detail-row__left"><span class="material-symbols-outlined text-error">warning</span> Obstructions</div>
+<span class="text-bold">2 (Vents)</span>
+</div>
+</div>
+<div class="heatmap mt-8">
+<img alt="Rooftop heatmap" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDu-bgxoJYTHl4ijrgP06Kw9NJsvlN0fvvZdWv-TBpR99fDK5JT6SXHwyqKzSpu8_Z78P4AgeKyY4gkzXBm_UMyF4k_VtWuNbzLykb70C_ricCBTgGOMFlWSYOiM8uTX21n_n8HbLkMhu_A04U8ohHAwTgcY6M3Yw7hHen68VSgilp5G-y5s-LC-4SBziz90imwbdndpuf4LEkpD4rvh0Cwg2tcX0hvIHNYXHqExCvlTmlJEVCSfSoeGKleAKZC21whFy1k3v1-Hv5V"/>
+<div class="map-gradient absolute inset-0"></div>
+<div class="heatmap__label">
+<span class="material-symbols-outlined text-accent icon-sm icon-filled">location_on</span>
+<span class="text-label text-white">Heatmap View</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<footer class="app-footer mt-12">
+<div class="footer-inner" style="justify-content:flex-start;padding-left:0">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</main>
+</div>
+
+<script>
+(function () {
+  var dropZone = document.getElementById('drop-zone');
+  var fileInput = document.getElementById('file-input');
+  var fileName = document.getElementById('file-name');
+  var analyzeBtn = document.getElementById('analyze-btn');
+  var downloadBtn = document.getElementById('download-btn');
+
+  function handleFile(file) {
+    if (file) fileName.textContent = file.name;
+  }
+
+  document.getElementById('upload-btn').addEventListener('click', function () { fileInput.click(); });
+  fileInput.addEventListener('change', function (e) { handleFile(e.target.files[0]); });
+  dropZone.addEventListener('click', function () { fileInput.click(); });
+  dropZone.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    dropZone.classList.add('drop-zone--active');
+  });
+  dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('drop-zone--active'); });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropZone.classList.remove('drop-zone--active');
+    if (e.dataTransfer.files[0]) {
+      fileInput.files = e.dataTransfer.files;
+      handleFile(e.dataTransfer.files[0]);
+    }
+  });
+
+  analyzeBtn.addEventListener('click', function () {
+    var orig = analyzeBtn.innerHTML;
+    analyzeBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Processing...';
+    analyzeBtn.disabled = true;
+    setTimeout(function () {
+      analyzeBtn.innerHTML = orig;
+      analyzeBtn.disabled = false;
+    }, 2000);
+  });
+
+  downloadBtn.addEventListener('click', function () {
+    var content = 'HelioSense AI — Rooftop Analysis Result\n\nRoof Area: 60 m²\nUsable Area: 45 m²\nShade Risk: LOW\nBest Placement: South-West\nAverage Pitch: 22.5°\nObstructions: 2 (Vents)\nSuitability Score: 88%';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
+    a.download = 'heliosense-analysis-result.txt';
+    a.click();
+  });
+window.getLocation = function () {
+
+    if (navigator.geolocation) {
+
+        navigator.geolocation.getCurrentPosition(
+
+            function (position) {
+
+                document.getElementById("locationResult").innerHTML = `
+                    <div class="glass-panel" style="padding:15px;">
+                        <strong>Location Detected</strong><br><br>
+
+                        Latitude:
+                        ${position.coords.latitude}<br>
+
+                        Longitude:
+                        ${position.coords.longitude}<br><br>
+
+                        ✅ Ready for Rooftop Analysis
+                    </div>
+                `;
+
+            },
+
+            function () {
+
+                document.getElementById("locationResult").innerHTML = `
+                    <div class="glass-panel" style="padding:15px;">
+                        ❌ Location permission denied.
+                    </div>
+                `;
+
+            }
+
+        );
+
+    } else {
+
+        alert("Geolocation is not supported by this browser.");
+
+    }
+
+};
+})();
+</script>
+</body>
+</html>

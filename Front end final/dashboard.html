@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item nav-item--active" href="/dashboard">
+<span class="material-symbols-outlined icon-filled">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<header class="app-header">
+<div class="app-header__inner">
+<div class="flex items-center gap-6">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+<div>
+<span class="page-eyebrow text-label">Dashboard</span>
+<h2 class="text-headline">Solar Portfolio Overview</h2>
+</div>
+</div>
+<div class="user-profile">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<span class="material-symbols-outlined text-accent">person</span>
+</div>
+<span class="text-label text-bold hidden-mobile">Student User</span>
+</div>
+</div>
+</header>
+
+<main class="page-content">
+<section class="mb-8">
+<div class="card card--lg glass-card">
+<h3 class="text-headline mb-2">Quick Actions</h3>
+<p class="text-body text-muted mb-6">Start your rooftop solar analysis workflow.</p>
+<div class="page-actions">
+<a class="btn btn--primary btn--md flex-1 solar-shimmer" href="/analysis">
+<span class="material-symbols-outlined">play_arrow</span>
+Start Analysis
+</a>
+<a class="btn btn--outline btn--md flex-1" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="btn btn--outline btn--md flex-1" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+View Predictions
+</a>
+<a class="btn btn--outline btn--md flex-1" href="/reports">
+<span class="material-symbols-outlined">summarize</span>
+Generate Report
+</a>
+</div>
+</div>
+</section>
+
+<section class="stats-grid mb-8">
+<div class="card glass-card">
+<div class="flex justify-between items-start mb-4">
+<div class="stat-card__icon stat-card__icon--accent">
+<span class="material-symbols-outlined icon-filled">wb_sunny</span>
+</div>
+<span class="badge badge--accent">+12%</span>
+</div>
+<p class="text-label text-muted text-uppercase">Suitability Score</p>
+<h3 class="text-stat mt-1">88%</h3>
+<div class="progress mt-4">
+<div class="progress__fill progress__fill--accent w-88"></div>
+</div>
+</div>
+<div class="card glass-card">
+<div class="stat-card__icon stat-card__icon--secondary mb-4">
+<span class="material-symbols-outlined icon-filled">bolt</span>
+</div>
+<p class="text-label text-muted text-uppercase">Annual Generation</p>
+<h3 class="text-stat mt-1">12.4 <span class="text-body font-normal text-muted">MWh</span></h3>
+</div>
+<div class="card glass-card">
+<div class="stat-card__icon stat-card__icon--green mb-4">
+<span class="material-symbols-outlined icon-filled">eco</span>
+</div>
+<p class="text-label text-muted text-uppercase">CO₂ Offset</p>
+<h3 class="text-stat mt-1">4.8 <span class="text-body font-normal text-muted">tons/yr</span></h3>
+</div>
+</section>
+
+<section class="dashboard-bento">
+<div class="card card--lg glass-card chart-card dashboard-chart">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h4 class="text-headline">Monthly Generation</h4>
+<p class="text-label text-muted">Power output trend for 2024</p>
+</div>
+</div>
+<div class="chart-bars">
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="40%"></div><span class="chart-label">JAN</span></div>
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="55%"></div><span class="chart-label">FEB</span></div>
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="62%"></div><span class="chart-label">MAR</span></div>
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="78%"></div><span class="chart-label">APR</span></div>
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="90%"></div><span class="chart-label">MAY</span></div>
+<div class="chart-bar-group"><div class="chart-bar chart-bar--accent" data-height="95%"></div><span class="chart-label">JUN</span></div>
+</div>
+</div>
+<div class="card card--lg glass-card">
+<h4 class="text-headline mb-2">Recent Activity</h4>
+<p class="text-label text-muted mb-6">Latest analysis sessions</p>
+<ul class="activity-list">
+<li class="activity-item">
+<span class="material-symbols-outlined text-accent">analytics</span>
+<div>
+<p class="activity-item__title">Rooftop Analysis Complete</p>
+<p class="activity-item__meta">Suitability score: 88% — 2 hours ago</p>
+</div>
+</li>
+<li class="activity-item">
+<span class="material-symbols-outlined text-secondary">description</span>
+<div>
+<p class="activity-item__title">Report Generated</p>
+<p class="activity-item__meta">Solar analysis report — 3 days ago</p>
+</div>
+</li>
+</ul>
+</div>
+</section>
+</main>
+
+<footer class="app-footer">
+<div class="footer-inner" style="justify-content:center">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Reports | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item nav-item--active" href="/reports">
+<span class="material-symbols-outlined icon-filled">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<main class="page-content page-content--no-header">
+<header class="page-header">
+<div>
+<h2 class="text-display">Solar Analysis Reports</h2>
+<p class="text-body-lg text-muted max-w-2xl">View and download comprehensive rooftop solar analysis reports.</p>
+</div>
+<div class="page-header__actions">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+</div>
+</header>
+
+<section class="analysis-summary-card glass-card">
+<h3 class="text-headline mb-2">Analysis Summary</h3>
+<p class="text-body text-muted mb-2">Complete overview of your latest rooftop solar analysis.</p>
+<div class="analysis-summary-grid">
+<div class="summary-stat">
+<p class="text-label text-muted">Suitability Score</p>
+<p class="summary-stat__value">88%</p>
+</div>
+<div class="summary-stat">
+<p class="text-label text-muted">Recommended Capacity</p>
+<p class="summary-stat__value">3 kW</p>
+</div>
+<div class="summary-stat">
+<p class="text-label text-muted">Annual Generation</p>
+<p class="summary-stat__value">4,320 kWh</p>
+</div>
+<div class="summary-stat">
+<p class="text-label text-muted">Best Placement</p>
+<p class="summary-stat__value">South-West</p>
+</div>
+</div>
+  <div class="page-actions mt-6">
+  <button class="btn btn--outline btn--md flex-1" id="view-report-btn" type="button">
+  <span class="material-symbols-outlined">visibility</span>
+  View Report
+  </button>
+  <button class="btn btn--primary btn--md flex-1 solar-glow" id="generate-pdf-btn" type="button">
+  <span class="material-symbols-outlined">picture_as_pdf</span>
+  Generate PDF Report
+  </button>
+  </div>
+</section>
+
+<section class="card glass-card mb-8">
+<div class="page-actions">
+<a class="btn btn--outline btn--md flex-1" href="/analysis">
+<span class="material-symbols-outlined">add_circle</span>
+New Analysis
+</a>
+</div>
+</section>
+
+<div class="space-y-6 mb-8">
+<div class="report-card glass-card glass-card--hover">
+<div class="report-card__icon report-card__icon--accent">
+<span class="material-symbols-outlined icon-lg">analytics</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 flex-wrap">
+<h3 class="text-headline">Rooftop Analysis Report — Jan 2024</h3>
+<span class="badge badge--success">Latest</span>
+</div>
+<p class="text-body text-muted mt-1">Solar yield analysis with rooftop suitability scoring and placement recommendations.</p>
+<div class="report-meta">
+<span class="text-label text-muted"><span class="material-symbols-outlined icon-sm">calendar_today</span> Jan 31, 2024</span>
+<span class="text-label text-muted"><span class="material-symbols-outlined icon-sm">database</span> 2.4 MB</span>
+</div>
+</div>
+</div>
+
+<div class="report-card glass-card opacity-80">
+<div class="report-card__icon report-card__icon--secondary">
+<span class="material-symbols-outlined icon-lg">bolt</span>
+</div>
+<div class="flex-1">
+<h3 class="text-headline">Energy Generation Forecast</h3>
+<p class="text-body text-muted mt-1">Monthly and annual power output projections based on roof analysis data.</p>
+<div class="report-meta">
+<span class="text-label text-muted"><span class="material-symbols-outlined icon-sm">calendar_today</span> Dec 15, 2023</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="featured-main glass-card group">
+<div class="featured-main__image">
+<img alt="Solar farm aerial view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuArjfwcXrsEGMQajmdsU9R2KnEIpMhKzpurYME61CeH1upOKqID26YjkmBr67IE9eeCdmKHHA82FOn4LzKwdabRLclhzC67O2_RR_S__lVON6b66CC5cbX_MmC03WkvM9GpDO9Acb-EijIEPoNFUL2LmAtAHR3kVkI916lQq8QkP-hB_m_wk8qLoZXcARgCApeq2Of3ETVqyEvjx-xnQFE4Kc1Wx6du6FgjFnN5TwExEhwpptVsU6siB1n80HGKH_BpFQ__q83WcWfz"/>
+<div class="featured-main__overlay"></div>
+<div class="featured-main__text">
+<h4 class="text-headline">Annual Solar Impact Summary</h4>
+<p class="text-body text-muted">Environmental and energy impact overview for your analyzed rooftop.</p>
+</div>
+</div>
+<div class="featured-main__footer">
+<span class="text-mono text-secondary">ID: RPT-2024-SOL-001</span>
+<span class="text-accent text-bold">88% Suitability</span>
+</div>
+</div>
+
+<footer class="app-footer mt-20">
+<div class="footer-inner" style="justify-content:flex-start;padding-left:0">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</main>
+</div>
+
+<div class="modal" id="report-modal">
+<div class="modal__content glass-card">
+<div class="modal__header">
+<h3 class="text-headline">Solar Analysis Report</h3>
+<button class="modal__close" id="close-modal" type="button">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="text-muted space-y-4">
+<p><strong class="text-white">Project:</strong> Rooftop Solar Feasibility Study</p>
+<p><strong class="text-white">Date:</strong> January 31, 2024</p>
+<p><strong class="text-white">Suitability Score:</strong> 88%</p>
+<p><strong class="text-white">Roof Area:</strong> 60 m² | <strong class="text-white">Usable Area:</strong> 45 m²</p>
+<p><strong class="text-white">Recommended Capacity:</strong> 8.2 kW</p>
+<p><strong class="text-white">Annual Generation:</strong> 12.4 MWh</p>
+<p><strong class="text-white">Shade Risk:</strong> LOW | <strong class="text-white">Best Placement:</strong> South-West</p>
+<p><strong class="text-white">CO₂ Offset:</strong> 4.8 tons/year</p>
+<hr class="modal-divider"/>
+<p class="text-sm">Generated by HelioSense AI using computer vision and spatial analysis algorithms.</p>
+</div>
+</div>
+</div>
+
+<script src="js/main.js"></script>
+<!-- jsPDF and AutoTable (CDN) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script src="js/reports.js"></script>
+</body>
+</html>

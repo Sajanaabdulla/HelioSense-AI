@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Login | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="auth-page">
+
+<div class="auth-page__mesh bg-mesh"></div>
+
+<main class="auth-main">
+<div class="auth-brand">
+<div class="flex items-center justify-center gap-2 mb-2">
+<span class="material-symbols-outlined auth-brand__icon icon-filled">solar_power</span>
+<h1 class="text-headline text-accent">HelioSense AI</h1>
+</div>
+<p class="text-label text-muted text-uppercase">Rooftop Solar Analysis Platform</p>
+</div>
+
+<div class="auth-card glass-card">
+<header class="auth-header">
+<h2 class="text-headline mb-2">Welcome Back</h2>
+<p class="text-body text-muted">Sign in to access your solar analysis dashboard.</p>
+</header>
+
+<form action="/dashboard" method="GET" class="space-y-6">
+<div class="input-field">
+<label class="text-label text-muted" for="email">Email Address</label>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">mail</span>
+<input class="form-input" id="email" name="email" type="email" placeholder="name@university.edu" required/>
+</div>
+</div>
+
+<div class="input-field">
+<div class="input-label-row">
+<label class="text-label text-muted" for="password">Password</label>
+<a class="text-label text-accent" href="#">Forgot?</a>
+</div>
+<div class="input-wrap">
+<span class="material-symbols-outlined input-wrap__icon">lock</span>
+<input class="form-input" id="password" name="password" type="password" placeholder="••••••••" required/>
+</div>
+</div>
+
+<div class="space-y-4" style="padding-top:8px">
+<button class="btn btn--primary btn--lg btn--full solar-glow" type="submit">
+Login
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<a class="btn btn--ghost btn--full text-label text-muted" href="/register">
+Don't have an account? <span class="text-accent text-semibold">Register</span>
+</a>
+</div>
+</form>
+</div>
+
+<footer class="mt-8 text-center">
+<p class="text-label text-muted opacity-60">© 2024 HelioSense AI — Final Year Project</p>
+</footer>
+</main>
+
+</body>
+</html>

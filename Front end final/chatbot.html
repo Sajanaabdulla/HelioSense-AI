@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Helia AI | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item" href="/roi">
+<span class="material-symbols-outlined">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item nav-item--active" href="/chatbot">
+<span class="material-symbols-outlined icon-filled">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<header class="app-header">
+<div class="app-header__inner">
+<div class="flex items-center gap-6">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+<div>
+<span class="page-eyebrow text-label">Helia AI</span>
+<h2 class="text-headline text-accent">Helia AI</h2>
+<p class="text-label text-muted">Your friendly solar consultant for predictions, ROI, and rooftop solar planning.</p>
+</div>
+</div>
+<div class="user-profile">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<span class="material-symbols-outlined text-accent">smart_toy</span>
+</div>
+</div>
+</div>
+</header>
+
+<main class="page-content">
+<div class="chat-actions">
+<button class="btn btn--outline btn--md" id="clear-chat-btn" type="button">
+<span class="material-symbols-outlined">delete_sweep</span>
+Clear Chat
+</button>
+</div>
+
+<div class="chat-layout">
+<div class="chat-window glass-card">
+<div class="chat-messages" id="chat-messages">
+<div class="chat-msg chat-msg--ai">
+<span class="chat-msg__label">Helia AI</span>
+Hello! I'm Helia, your smart solar planning assistant. Ask me about subsidies, panel requirements, rooftop suitability, ROI, or energy generation.
+</div>
+</div>
+<div class="chat-input-area">
+<input class="chat-input" id="chat-input" type="text" placeholder="Ask Helia about solar, ROI, or rooftop planning..." autocomplete="off"/>
+<button class="btn btn--primary btn--md" id="send-chat-btn" type="button">
+<span class="material-symbols-outlined">send</span>
+Send
+</button>
+</div>
+</div>
+
+<aside class="chat-suggestions glass-card" style="padding:20px">
+<h4 class="text-headline mb-4">Suggested Questions</h4>
+<button class="chat-suggestion" type="button" data-question="Explain my prediction">Explain my prediction</button>
+<button class="chat-suggestion" type="button" data-question="Explain ROI">Explain ROI</button>
+<button class="chat-suggestion" type="button" data-question="Is solar worth it?">Is solar worth it?</button>
+<button class="chat-suggestion" type="button" data-question="How many panels do I need?">How many panels do I need?</button>
+<button class="chat-suggestion" type="button" data-question="What is solar irradiance?">What is solar irradiance?</button>
+<button class="chat-suggestion" type="button" data-question="What is net metering?">What is net metering?</button>
+</aside>
+</div>
+</main>
+
+<footer class="app-footer">
+<div class="footer-inner" style="justify-content:center">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</div>
+
+<script src="js/main.js"></script>
+</body>
+</html>

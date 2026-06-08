@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ROI Calculator | HelioSense AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="css/style.css"/>
+</head>
+<body class="app-body">
+
+<aside class="sidebar">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
+<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+<div class="logo__text">
+<span class="logo__title">HelioSense AI</span>
+<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+</div>
+</a>
+<nav class="sidebar__nav">
+<a class="nav-item" href="/dashboard">
+<span class="material-symbols-outlined">dashboard</span>
+Dashboard
+</a>
+<a class="nav-item" href="/analysis">
+<span class="material-symbols-outlined">analytics</span>
+Analysis
+</a>
+<a class="nav-item" href="/energy">
+<span class="material-symbols-outlined">bolt</span>
+Energy Usage
+</a>
+<a class="nav-item" href="/prediction">
+<span class="material-symbols-outlined">online_prediction</span>
+Prediction
+</a>
+<a class="nav-item nav-item--active" href="/roi">
+<span class="material-symbols-outlined icon-filled">payments</span>
+ROI
+</a>
+<a class="nav-item" href="/reports">
+<span class="material-symbols-outlined">description</span>
+Reports
+</a>
+<a class="nav-item" href="/chatbot">
+<span class="material-symbols-outlined">smart_toy</span>
+Helia AI
+</a>
+</nav>
+<div class="sidebar__footer">
+<a class="nav-item" href="/login">
+<span class="material-symbols-outlined">logout</span>
+Logout
+</a>
+</div>
+</aside>
+
+<div class="app-main">
+<header class="app-header">
+<div class="app-header__inner">
+<div class="flex items-center gap-6">
+<a class="btn-home" href="/">
+<span class="material-symbols-outlined icon-sm">home</span>
+Home
+</a>
+					<div>
+						<span class="page-eyebrow text-label">ROI</span>
+						<h2 class="text-headline">ROI Intelligence</h2>
+						<p class="text-label text-muted">Strategic Investment Analysis</p>
+					</div>
+				</div>
+			</header>
+
+<main class="page-content space-y-8">
+<div id="roiMessage" class="card glass-card" style="display:none;margin-bottom:20px;">
+<p class="text-body text-muted">Generate a solar prediction first. Visit the Prediction page to analyze solar output and unlock your ROI insights.</p>
+</div>
+		<div id="roiContent">
+			<!-- KPI row -->
+<section class="roi-stats-grid" style="margin-bottom:16px;">
+
+    <div class="card glass-card roi-stat-card">
+        <div class="value-label">Installation Cost</div>
+        <div id="installationCost" class="value-large" style="margin-top:12px;">₹0</div>
+        <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Includes panels & installation</div>
+    </div>
+
+    <div class="card glass-card roi-stat-card">
+        <div class="value-label">Annual Savings</div>
+        <div id="annualSavings" class="value-large" style="margin-top:12px;">₹0</div>
+        <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected savings based on output</div>
+    </div>
+
+    <div class="card glass-card roi-stat-card">
+        <div class="value-label">ROI Percentage</div>
+        <div id="roiPercentage" class="value-large value-accent" style="margin-top:12px;">0%</div>
+        <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Strong return with current assumptions</div>
+    </div>
+
+    <div class="card glass-card roi-stat-card">
+        <div class="value-label">Payback Period</div>
+        <div id="paybackPeriod" class="value-large" style="margin-top:12px;">0 yrs</div>
+        <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Time to recover initial investment</div>
+    </div>
+
+</section>
+
+			<!-- Highlight cards -->
+			<section class="roi-highlight-grid" style="margin-bottom:16px;">
+				<div class="card glass-card roi-highlight-card">
+					<div class="value-label">Break-even Date</div>
+					<div id="breakEvenDate" class="value-large" style="margin-top:12px;">March 2031</div>
+					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected date when investment is recovered</div>
+				</div>
+				<div class="card glass-card roi-highlight-card">
+					<div class="value-label">Lifetime Savings</div>
+					<div id="lifetimeSavings" class="value-large" style="margin-top:12px;">₹4,50,000</div>
+					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Total savings over the system lifecycle</div>
+				</div>
+			</section>
+
+			<!-- Parameters + Smart Insights -->
+			<div class="roi-layout" style="margin-bottom:16px;">
+				<div class="card glass-card" style="padding:24px;">
+					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+						<div>
+							<h4 style="margin:0;font-size:18px;">Parameters</h4>
+							<div style="font-size:13px;color:#9CA3AF;margin-top:6px;">Tune the financial assumptions for the ROI model</div>
+						</div>
+					</div>
+					<div style="display:grid;gap:18px;">
+						<div>
+							<div class="value-label">Utility Inflation Rate</div>
+							<div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+								<input type="range" min="0" max="10" step="0.5" value="4.5" style="flex:1;" />
+								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;">4.5%</div>
+							</div>
+						</div>
+						<div>
+							<div class="value-label">Panel Degradation</div>
+							<div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+								<input type="range" min="0" max="2" step="0.1" value="0.5" style="flex:1;" />
+								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;">0.5%</div>
+							</div>
+						</div>
+						<div>
+							<div class="value-label">Investment Type</div>
+							<select style="width:100%;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;color:#ECEFF4;margin-top:10px;">
+								<option>Direct Purchase</option>
+								<option>PPA Financing</option>
+								<option>Solar Lease</option>
+							</select>
+						</div>
+						<button id="recalculate-btn" class="btn btn-location" type="button" style="width:100%;margin-top:12px;">Recalculate ROI</button>
+					</div>
+				</div>
+				<div class="card glass-card insight-panel" style="padding:24px;">
+					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+						<div>
+							<h4 style="margin:0;font-size:18px;">Smart Insights</h4>
+							<div style="font-size:13px;color:#9CA3AF;margin-top:6px;">Key financial indicators for quick review</div>
+						</div>
+					</div>
+					<div class="insight-grid">
+						<div class="insight-card" style="padding:18px;">
+							<div class="value-label">ROI Rating</div>
+							<div class="value-large value-accent" style="margin-top:10px;">Good</div>
+							<div class="insight-chip chip--success" style="margin-top:12px;">Excellent</div>
+							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Performance is strong for the current plan.</div>
+						</div>
+						<div class="insight-card" style="padding:18px;">
+							<div class="value-label">Financial Recommendation</div>
+							<div class="value-large" style="margin-top:10px;color:#f59e0b;">Review</div>
+							<div class="insight-chip chip--warning" style="margin-top:12px;">Review</div>
+							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Fine-tune assumptions before final approval.</div>
+						</div>
+						<div class="insight-card" style="padding:18px;">
+							<div class="value-label">Risk Level</div>
+							<div class="value-large value-warning" style="margin-top:10px;">Moderate</div>
+							<div class="insight-chip chip--warning" style="margin-top:12px;">Moderate</div>
+							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Main exposure is tariff and policy movement.</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+</main>
+
+<footer class="app-footer">
+<div class="footer-inner" style="justify-content:center">
+<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+</div>
+</footer>
+</div>
+
+<script src="js/main.js"></script>
+<script src="js/roi.js"></script>
+</body>
+</html>
