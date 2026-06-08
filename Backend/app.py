@@ -13,6 +13,10 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
 
+@app.route("/")
+def home():
+    return send_from_directory(FRONTEND_FOLDER, "index.html")
+
 # ==========================
 # WEBSITE ROUTES
 # ==========================
@@ -161,6 +165,9 @@ def predict_solar():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/<path:path>')
+def static_files(path):
+    return send_from_directory(FRONTEND_FOLDER, path)
 
 @app.route('/chat-query', methods=['POST'])
 def chat_query():
