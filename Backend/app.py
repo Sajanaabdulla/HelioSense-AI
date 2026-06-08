@@ -39,6 +39,7 @@ def analysis():
     return send_from_directory(FRONTEND_FOLDER, 'analysis.html')
 
 @app.route('/energy')
+@app.route('/energy-usage')
 def energy():
     return send_from_directory(FRONTEND_FOLDER, 'energy-usage.html')
 
@@ -170,9 +171,16 @@ def predict_solar():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/<path:path>')
+@app.route('/<path:path>', methods=['GET'])
 def static_files(path):
-    return send_from_directory(FRONTEND_FOLDER, path)
+    requested_path = os.path.join(FRONTEND_FOLDER, path)
+    if os.path.exists(requested_path):
+        return send_from_directory(FRONTEND_FOLDER, path)
+    # If the requested path does not exist, fallback to the frontend index for client-side navigation.
+    index_path = os.path.join(FRONTEND_FOLDER, 'index.html')
+    if os.path.exists(index_path):
+        return send_from_directory(FRONTEND_FOLDER, 'index.html')
+    return jsonify({"error": "File not found"}), 404
 
 @app.route('/chat-query', methods=['POST'])
 def chat_query():

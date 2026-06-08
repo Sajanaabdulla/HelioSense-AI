@@ -18,6 +18,12 @@ BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH       = os.path.join(BASE_DIR, "models", "solar_model.pkl")
 CLIMATOLOGY_PATH = os.path.join(BASE_DIR, "models", "climatology.pkl")
 
+# Support alternate legacy locations for deployed artifacts
+if not os.path.exists(MODEL_PATH):
+    MODEL_PATH = os.path.join(BASE_DIR, "solar_model.pkl")
+if not os.path.exists(CLIMATOLOGY_PATH):
+    CLIMATOLOGY_PATH = os.path.join(BASE_DIR, "climatology.pkl")
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 PANEL_WATT         = 550          # W  — panel wattage
 PANEL_EFFICIENCY   = 0.195        # 19.5 % average commercial panel
