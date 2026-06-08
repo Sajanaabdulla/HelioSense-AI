@@ -200,7 +200,9 @@
   }
 
   const CHAT_HISTORY_KEY = 'heliaChatHistory';
-  const CHAT_ENDPOINT = '/chat-query';
+  const HELIA_USER_KEY = 'heliaUser';
+  const API_BASE_URL = window.HELIOSENSE_API_URL || '';
+  const CHAT_ENDPOINT = `${API_BASE_URL}/chat-query`;
 
   function logDebug(label, value) {
     console.log(label, value);
@@ -234,6 +236,110 @@
     }
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
+  }
+
+  function getSavedUser() {
+    try {
+      return JSON.parse(localStorage.getItem(HELIA_USER_KEY) || 'null');
+    } catch (error) {
+      console.warn('Unable to parse user from localStorage:', error);
+      return null;
+    }
+  }
+
+  function saveUser(user) {
+    try {
+      localStorage.setItem(HELIA_USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.warn('Unable to save user to localStorage:', error);
+    }
+  }
+
+  function clearUser() {
+    localStorage.removeItem(HELIA_USER_KEY);
+  }
+
+  function initUserProfile() {
+    const user = getSavedUser();
+    const display = document.getElementById('userNameDisplay');
+    if (display) {
+      display.textContent = (user && user.name) ? user.name : 'Guest';
+    }
+  }
+
+  function initAuthForms() {
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const logoutLinks = document.querySelectorAll('a[href="/login"]');
+
+    if (logoutLinks.length) {
+      logoutLinks.forEach(function (link) {
+        link.addEventListener('click', function () {
+          clearUser();
+        });
+      });
+    }
+
+    function validateEmail(email) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    if (loginForm) {
+      loginForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const email = (loginForm.email.value || '').trim();
+        if (!validateEmail(email)) {
+          alert('Please enter a valid email address.');
+          loginForm.email.focus();
+          return;
+        }
+        const name = email.split('@')[0].replace(/[._-]+/g, ' ').trim();
+        const user = {
+          name: name.split(' ').map(function (part) {
+            return part.charAt(0).toUpperCase() + part.slice(1);
+          }).join(' '),
+          email: email
+        };
+        saveUser(user);
+        window.location.href = '/dashboard';
+      });
+    }
+
+    if (registerForm) {
+      registerForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const fullName = (registerForm.full_name.value || '').trim();
+        const email = (registerForm.email.value || '').trim();
+        const password = registerForm.password.value || '';
+        const confirmPassword = registerForm.confirm_password.value || '';
+        if (!fullName) {
+          alert('Please enter your full name.');
+          registerForm.full_name.focus();
+          return;
+        }
+        if (!validateEmail(email)) {
+          alert('Please enter a valid email address.');
+          registerForm.email.focus();
+          return;
+        }
+        if (password.length < 6) {
+          alert('Please choose a password with at least 6 characters.');
+          registerForm.password.focus();
+          return;
+        }
+        if (password !== confirmPassword) {
+          alert('Passwords do not match.');
+          registerForm.confirm_password.focus();
+          return;
+        }
+        const user = {
+          name: fullName,
+          email: email
+        };
+        saveUser(user);
+        window.location.href = '/dashboard';
+      });
+    }
   }
 
   async function queryHelia(question) {
@@ -357,6 +463,9 @@
     initEnergyUsage();
     initChatbot();
     initSolarPrediction();
+    initAnalysis();
+    initAuthForms();
+    initUserProfile();
   });
 })();
 
@@ -599,19 +708,19 @@ function initSolarPrediction() {
 
         // Send to backend prediction API
         const predictionResponse = await fetch(
-         "https://heliosense-ai.onrender.com/predict-solar",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            latitude,
-            longitude,
-            temperature,
-            humidity,
-            wind_speed
-          })
-        }
-       );
+          `${API_BASE_URL}/predict-solar`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              latitude,
+              longitude,
+              temperature,
+              humidity,
+              wind_speed
+            })
+          }
+        );
         if (!predictionResponse.ok) {
           throw new Error(`Prediction API error: ${predictionResponse.status}`);
         }
@@ -680,6 +789,31 @@ function updateDashboardCards(result) {
       console.log(`Updated ${key}:`, data.value);
     } else {
       console.warn(`DOM element not found for ${key}`);
+    }
+  }
+
+  // Log full result for debugging
+  const progressElement = document.getElementById("suitabilityProgress");
+  if (progressElement && typeof result.potential_score === 'number') {
+    progressElement.style.width = `${Math.min(100, Math.max(0, result.potential_score))}%`;
+  }
+
+  if (result.monthly_generation && typeof result.monthly_generation === 'object') {
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    const barElements = document.querySelectorAll('.chart-bar');
+    const values = months.map((m) => parseFloat(result.monthly_generation[m] || 0));
+    const maxValue = Math.max(...values, 1);
+    barElements.forEach(function (bar, index) {
+      const height = Math.round((values[index] || 0) / maxValue * 100);
+      bar.style.height = `${height}%`;
+    });
+  }
+
+  const user = getSavedUser();
+  if (user && user.name) {
+    const userNameDisplay = document.getElementById('userNameDisplay');
+    if (userNameDisplay) {
+      userNameDisplay.textContent = user.name;
     }
   }
 

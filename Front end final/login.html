@@ -27,12 +27,12 @@
 <p class="text-body text-muted">Sign in to access your solar analysis dashboard.</p>
 </header>
 
-<form action="/dashboard" method="GET" class="space-y-6">
+<form id="loginForm" action="/dashboard" method="GET" class="space-y-6">
 <div class="input-field">
 <label class="text-label text-muted" for="email">Email Address</label>
 <div class="input-wrap">
 <span class="material-symbols-outlined input-wrap__icon">mail</span>
-<input class="form-input" id="email" name="email" type="email" placeholder="name@university.edu" required/>
+<input class="form-input" id="email" name="email" type="email" placeholder="example@gmail.com" required/>
 </div>
 </div>
 
@@ -64,5 +64,6 @@ Don't have an account? <span class="text-accent text-semibold">Register</span>
 </footer>
 </main>
 
+<script src="js/main.js"></script>
 </body>
 </html>

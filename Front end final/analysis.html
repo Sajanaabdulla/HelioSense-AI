@@ -27,7 +27,7 @@ Dashboard
 <span class="material-symbols-outlined icon-filled">analytics</span>
 Analysis
 </a>
-<a class="nav-item" href="/energy">
+<a class="nav-item" href="/energy-usage">
 <span class="material-symbols-outlined">bolt</span>
 Energy Usage
 </a>
@@ -83,7 +83,7 @@ Home
             </p>
         </div>
 
-        <button class="btn btn--primary" onclick="getLocation()">
+        <button class="btn btn--primary" id="detectLocationBtn" type="button">
             <span class="material-symbols-outlined">my_location</span>
             Detect Location
         </button>
@@ -127,13 +127,13 @@ Download Result
 <div class="grid-2">
 <div class="card glass-panel">
 <p class="text-label text-muted mb-1">Roof Area</p>
-<h4 class="text-3xl text-bold text-accent">60 m²</h4>
-<div class="progress progress--thin mt-4"><div class="progress__fill progress__fill--accent w-80"></div></div>
+<h4 id="roofAreaValue" class="text-3xl text-bold text-accent">—</h4>
+<div class="progress progress--thin mt-4"><div id="roofAreaProgress" class="progress__fill progress__fill--accent" style="width:0%"></div></div>
 </div>
 <div class="card glass-panel">
 <p class="text-label text-muted mb-1">Usable Area</p>
-<h4 class="text-3xl text-bold text-secondary">45 m²</h4>
-<div class="progress progress--thin mt-4"><div class="progress__fill progress__fill--secondary w-75"></div></div>
+<h4 id="usableAreaValue" class="text-3xl text-bold text-secondary">—</h4>
+<div class="progress progress--thin mt-4"><div id="usableAreaProgress" class="progress__fill progress__fill--secondary" style="width:0%"></div></div>
 </div>
 </div>
 
@@ -145,19 +145,19 @@ Download Result
 <div class="space-y-6">
 <div class="detail-row">
 <div class="detail-row__left"><span class="material-symbols-outlined text-secondary">wb_sunny</span> Shade Risk</div>
-<span class="badge badge--success">LOW</span>
+<span id="shadeRiskValue" class="badge badge--success">—</span>
 </div>
 <div class="detail-row">
 <div class="detail-row__left"><span class="material-symbols-outlined text-accent">explore</span> Best Placement</div>
-<span class="text-bold">South-West Section</span>
+<span id="placementValue" class="text-bold">—</span>
 </div>
 <div class="detail-row">
 <div class="detail-row__left"><span class="material-symbols-outlined text-tertiary-bright">architecture</span> Average Pitch</div>
-<span class="text-bold">22.5°</span>
+<span id="pitchValue" class="text-bold">—</span>
 </div>
 <div class="detail-row">
 <div class="detail-row__left"><span class="material-symbols-outlined text-error">warning</span> Obstructions</div>
-<span class="text-bold">2 (Vents)</span>
+<span id="obstructionsValue" class="text-bold">—</span>
 </div>
 </div>
 <div class="heatmap mt-8">
@@ -180,96 +180,6 @@ Download Result
 </main>
 </div>
 
-<script>
-(function () {
-  var dropZone = document.getElementById('drop-zone');
-  var fileInput = document.getElementById('file-input');
-  var fileName = document.getElementById('file-name');
-  var analyzeBtn = document.getElementById('analyze-btn');
-  var downloadBtn = document.getElementById('download-btn');
-
-  function handleFile(file) {
-    if (file) fileName.textContent = file.name;
-  }
-
-  document.getElementById('upload-btn').addEventListener('click', function () { fileInput.click(); });
-  fileInput.addEventListener('change', function (e) { handleFile(e.target.files[0]); });
-  dropZone.addEventListener('click', function () { fileInput.click(); });
-  dropZone.addEventListener('dragover', function (e) {
-    e.preventDefault();
-    dropZone.classList.add('drop-zone--active');
-  });
-  dropZone.addEventListener('dragleave', function () { dropZone.classList.remove('drop-zone--active'); });
-  dropZone.addEventListener('drop', function (e) {
-    e.preventDefault();
-    dropZone.classList.remove('drop-zone--active');
-    if (e.dataTransfer.files[0]) {
-      fileInput.files = e.dataTransfer.files;
-      handleFile(e.dataTransfer.files[0]);
-    }
-  });
-
-  analyzeBtn.addEventListener('click', function () {
-    var orig = analyzeBtn.innerHTML;
-    analyzeBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Processing...';
-    analyzeBtn.disabled = true;
-    setTimeout(function () {
-      analyzeBtn.innerHTML = orig;
-      analyzeBtn.disabled = false;
-    }, 2000);
-  });
-
-  downloadBtn.addEventListener('click', function () {
-    var content = 'HelioSense AI — Rooftop Analysis Result\n\nRoof Area: 60 m²\nUsable Area: 45 m²\nShade Risk: LOW\nBest Placement: South-West\nAverage Pitch: 22.5°\nObstructions: 2 (Vents)\nSuitability Score: 88%';
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
-    a.download = 'heliosense-analysis-result.txt';
-    a.click();
-  });
-window.getLocation = function () {
-
-    if (navigator.geolocation) {
-
-        navigator.geolocation.getCurrentPosition(
-
-            function (position) {
-
-                document.getElementById("locationResult").innerHTML = `
-                    <div class="glass-panel" style="padding:15px;">
-                        <strong>Location Detected</strong><br><br>
-
-                        Latitude:
-                        ${position.coords.latitude}<br>
-
-                        Longitude:
-                        ${position.coords.longitude}<br><br>
-
-                        ✅ Ready for Rooftop Analysis
-                    </div>
-                `;
-
-            },
-
-            function () {
-
-                document.getElementById("locationResult").innerHTML = `
-                    <div class="glass-panel" style="padding:15px;">
-                        ❌ Location permission denied.
-                    </div>
-                `;
-
-            }
-
-        );
-
-    } else {
-
-        alert("Geolocation is not supported by this browser.");
-
-    }
-
-};
-})();
-</script>
+<script src="js/main.js"></script>
 </body>
 </html>

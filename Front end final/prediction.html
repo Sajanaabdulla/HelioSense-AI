@@ -11,7 +11,7 @@
 <body class="app-body">
 
 <aside class="sidebar">
-<a class="logo logo--sm sidebar__brand" href="/index" style="margin-bottom:40px;padding:0 16px">
+<a class="logo logo--sm sidebar__brand" href="/" style="margin-bottom:40px;padding:0 16px">
 <img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
 <div class="logo__text">
 <span class="logo__title">HelioSense AI</span>
@@ -60,7 +60,7 @@ Logout
 <header class="app-header">
 <div class="app-header__inner">
 <div class="flex items-center gap-6">
-<a class="btn-home" href="/index">
+<a class="btn-home" href="/">
 <span class="material-symbols-outlined icon-sm">home</span>
 Home
 </a>
@@ -73,7 +73,7 @@ Home
 <div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
 <span class="material-symbols-outlined text-accent">person</span>
 </div>
-<span class="text-label text-bold hidden-mobile">Student User</span>
+<span id="userNameDisplay" class="text-label text-bold hidden-mobile">Guest</span>
 </div>
 </div>
 </header>
@@ -164,7 +164,7 @@ Home
 <circle cx="80" cy="80" r="70" fill="transparent" stroke="#facc15" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="66"/>
 </svg>
 <div class="gauge__value">
-<span id="potentialScore" class="text-4xl text-bold">91</span>
+<span id="potentialScore" class="text-4xl text-bold">—</span>
 <span class="text-label text-muted text-uppercase">Optimal</span>
 </div>
 </div>
@@ -181,7 +181,7 @@ Home
 <div class="card glass-card prediction-col-8">
 <div class="flex justify-between items-end mb-8">
 <div>
-<h3 id="annualProjection">4200</h3>
+<h3 id="annualProjection">—</h3>
 <p class="text-label text-muted">Expected MWh yield by year</p>
 </div>
 </div>
@@ -198,25 +198,25 @@ Home
 <div class="prediction-metric-card glass-card">
 <span class="material-symbols-outlined text-accent icon-lg">wb_sunny</span>
 <p class="text-label text-muted mt-4">Peak Sun Hours</p>
-<h4 id="peakSunHours">5.4 Hours/Day</h4>
+<h4 id="peakSunHours">—</h4>
 <p class="desc">Average Daily Sunlight Availability</p>
 </div>
 <div class="prediction-metric-card glass-card">
 <span class="material-symbols-outlined text-accent icon-lg">solar_power</span>
 <p class="text-label text-muted mt-4">Recommended Solar Capacity</p>
-<h4 id="solarCapacity">3 kW</h4>
+<h4 id="solarCapacity">—</h4>
 <p class="desc">Recommended System</p>
 </div>
 <div class="prediction-metric-card glass-card">
 <span class="material-symbols-outlined text-accent icon-lg">grid_view</span>
 <p class="text-label text-muted mt-4">Recommended Panel Count</p>
-<h4 id="panelCount">8 Panels</h4>
+<h4 id="panelCount">—</h4>
 <p class="desc">Solar Panels</p>
 </div>
 <div class="prediction-metric-card glass-card">
 <span class="material-symbols-outlined text-green icon-lg">percent</span>
 <p class="text-label text-muted mt-4">Energy Coverage</p>
-<h4 id="energyCoverage">96%</h4>
+<h4 id="energyCoverage">—</h4>
 <p class="desc">of Current Consumption Covered</p>
 </div>
 </div>

@@ -39,7 +39,9 @@ def analysis():
     return send_from_directory(FRONTEND_FOLDER, 'analysis.html')
 
 @app.route('/energy')
+@app.route('/energy.html')
 @app.route('/energy-usage')
+@app.route('/energy-usage.html')
 def energy():
     return send_from_directory(FRONTEND_FOLDER, 'energy-usage.html')
 
