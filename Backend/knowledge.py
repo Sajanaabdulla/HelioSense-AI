@@ -46,12 +46,17 @@ class KnowledgeStore:
             self._ingest_pdf(pdf_file)
 
         if not self.chunks:
-            self.vectorizer = TfidfVectorizer(stop_words='english', max_features=20000)
-            self.embeddings = self.vectorizer.fit_transform([''])
-            self._save_store()
-            return
+           self.chunks = ["HelioSense AI Solar Assistant"]
+           self.metadata = [{
+                "source": "default",
+                "page": "1"
+           }]
 
-        self.vectorizer = TfidfVectorizer(stop_words='english', max_features=20000)
+        self.vectorizer = TfidfVectorizer(
+            stop_words='english',
+            max_features=20000
+        )
+
         self.embeddings = self.vectorizer.fit_transform(self.chunks)
         self._save_store()
 
