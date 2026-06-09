@@ -1,6 +1,6 @@
 -- MySQL schema for Helia AI
-CREATE DATABASE IF NOT EXISTS helia;
-USE helia;
+CREATE DATABASE IF NOT EXISTS heliosense_ai;
+USE heliosense_ai;
 
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,

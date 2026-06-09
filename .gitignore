@@ -6,14 +6,17 @@ __pycache__/
 .venv/
 venv/
 
-# YOLO Training
+# Datasets
+Backend/data/
+
+# Models
+Backend/models/
+
+# YOLO
 runs/
 *.pt
 *.onnx
-
-# Datasets
-Backend/data/roof_segmentation/
-Backend/data/solar_panel/
+*.pkl
 
 # Cache
 *.cache
@@ -24,7 +27,7 @@ Backend/data/solar_panel/
 # Logs
 *.log
 
-# Environment Variables
+# Environment
 .env
 
 # Database

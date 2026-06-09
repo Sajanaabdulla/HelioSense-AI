@@ -3,6 +3,9 @@ from flask_cors import CORS
 from datetime import datetime
 import traceback
 import os
+import pytesseract
+from PIL import Image
+import re
 
 from predict import predict
 from knowledge import knowledge_store
@@ -69,6 +72,25 @@ def debug():
         "exists": os.path.exists(FRONTEND_FOLDER),
         "files": os.listdir(FRONTEND_FOLDER) if os.path.exists(FRONTEND_FOLDER) else []
     })
+@app.route("/upload-bill", methods=["POST"])
+def upload_bill():
+    try:
+        file = request.files["bill"]
+
+        image = Image.open(file)
+
+        text = pytesseract.image_to_string(image)
+
+        return jsonify({
+            "success": True,
+            "text": text
+        })
+
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 # ==========================
 # STATIC FILES
 # ==========================
@@ -338,8 +360,6 @@ if __name__ == "__main__":
         debug=True,
         use_reloader=False
     )
-import pytesseract
-
 pytesseract.pytesseract.tesseract_cmd = (
     r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 )

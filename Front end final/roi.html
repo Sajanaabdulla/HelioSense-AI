@@ -77,6 +77,42 @@ Home
 <p class="text-body text-muted">Generate a solar prediction first. Visit the Prediction page to analyze solar output and unlock your ROI insights.</p>
 </div>
 		<div id="roiContent">
+			<!-- Rooftop Analysis Controls -->
+			<section class="card glass-card" style="margin-bottom:16px; padding:18px;">
+				<div style="display:flex;flex-direction:column;gap:12px;">
+					<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+						<button id="detect-location-btn" class="btn btn--primary btn--md" type="button">
+							<span class="material-symbols-outlined">my_location</span>
+							Detect Location
+						</button>
+						<div id="latlng" style="color:#d1c6ab;font-size:14px;">Location: <span id="latlng-value">Not detected</span></div>
+						<button id="upload-image-btn" class="btn btn--outline btn--md" type="button">
+							<span class="material-symbols-outlined">cloud_upload</span>
+							Upload Rooftop Image
+						</button>
+						<input id="roof-image-input" type="file" accept="image/png, image/jpeg" style="display:none" />
+						<button id="analyze-btn" class="btn btn--primary btn--lg" type="button">
+							<span id="analyze-btn-icon" class="material-symbols-outlined">analytics</span>
+							Analyze Rooftop
+						</button>
+						<button id="download-btn" class="btn btn--ghost btn--md" type="button" disabled>
+							<span class="material-symbols-outlined">download</span>
+							Download Result
+						</button>
+					</div>
+					<div style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap;">
+						<div style="min-width:220px;max-width:360px;">
+							<div class="value-label">Selected Image Preview</div>
+							<div style="margin-top:8px;">
+								<img id="image-preview" alt="Preview" style="width:100%;border-radius:12px;display:none;border:1px solid rgba(255,255,255,0.06);"/>
+							</div>
+						</div>
+						<div id="analysis-results" style="flex:1;min-width:320px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+							<!-- Result cards will be populated by JS -->
+						</div>
+					</div>
+				</div>
+			</section>
 			<!-- KPI row -->
 <section class="roi-stats-grid" style="margin-bottom:16px;">
 
