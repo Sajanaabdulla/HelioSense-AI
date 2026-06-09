@@ -1,7 +1,31 @@
-.venv/
+# Python
 __pycache__/
 *.pyc
 
-*.pkl
-dataaaaa/
-Backend/plots/
+# Virtual Environment
+.venv/
+venv/
+
+# YOLO Training
+runs/
+*.pt
+*.onnx
+
+# Datasets
+Backend/data/roof_segmentation/
+Backend/data/solar_panel/
+
+# Cache
+*.cache
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Environment Variables
+.env
+
+# Database
+*.db
