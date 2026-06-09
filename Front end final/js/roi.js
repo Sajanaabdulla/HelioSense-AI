@@ -7,6 +7,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const investmentRecoveryEl = document.getElementById("investmentRecoveryPeriod");
   const breakEvenDateEl = document.getElementById("breakEvenDate");
   const lifetimeSavingsEl = document.getElementById("lifetimeSavings");
+  const carbonReductionEl = document.getElementById("carbonReduction");
+  const dataBadgeEl = document.getElementById("dataBadge");
   const roiMessageEl = document.getElementById("roiMessage");
   const roiContentEl = document.getElementById("roiContent");
 
@@ -23,6 +25,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const INSTALL_COST_PER_KW = 55000;
   const ELECTRICITY_TARIFF = 7;
   const SYSTEM_LIFETIME_YEARS = 25;
+  const CO2_REDUCTION_PER_MWH = 1.04; // tons
+
+  // Demo prediction values
+  const DEMO_PREDICTION = {
+    recommended_capacity: 8,
+    annual_projection: 11600,
+    panel_count: 18,
+    energy_coverage: 100,
+    potential_score: 91
+  };
 
   // Demo rooftop analysis values
   const DEMO_RESULTS = {
@@ -104,12 +116,12 @@ document.addEventListener("DOMContentLoaded", function () {
   };
 
   const formatPercent = (value) => {
-    if (!Number.isFinite(value)) return "N/A";
-    return `${Number(value).toFixed(0)}%`;
+    if (!Number.isFinite(value)) return "0%";
+    return `${Number(value).toFixed(1)}%`;
   };
 
   const formatYears = (value) => {
-    if (!Number.isFinite(value)) return "N/A";
+    if (!Number.isFinite(value)) return "0.0 Years";
     return `${Number(value).toFixed(1)} Years`;
   };
 
@@ -121,39 +133,53 @@ document.addEventListener("DOMContentLoaded", function () {
     return now.toLocaleString("en-IN", { month: "long", year: "numeric" });
   };
 
-  // Load ROI data from localStorage (used by ROI cards)
+  // Load ROI data from localStorage or use demo
   const loadRoiData = () => {
     let prediction = null;
+    let isLiveData = false;
+    
     try {
       prediction = JSON.parse(localStorage.getItem("solarPrediction"));
     } catch (err) {
+      console.warn("Could not parse stored prediction:", err);
       prediction = null;
     }
 
-    const capacity = Number(prediction?.recommended_capacity);
-    const annualProjection = Number(prediction?.annual_projection);
-    const panelCount = prediction?.panel_count;
-    const energyCoverage = prediction?.energy_coverage;
-
-    const hasValidPrediction =
-      Number.isFinite(capacity) && Number.isFinite(annualProjection) && panelCount != null && energyCoverage != null;
-
-    if (!hasValidPrediction) {
-      if (roiMessageEl) roiMessageEl.style.display = "block";
-      if (roiContentEl) roiContentEl.style.display = "none";
-      return;
+    // Validate prediction has required fields
+    if (!prediction || !Number.isFinite(prediction.recommended_capacity) || !Number.isFinite(prediction.annual_projection)) {
+      prediction = DEMO_PREDICTION;
+      isLiveData = false;
+    } else {
+      isLiveData = true;
     }
 
-    if (roiMessageEl) roiMessageEl.style.display = "none";
+    // Always show content
     if (roiContentEl) roiContentEl.style.display = "block";
+    if (roiMessageEl) roiMessageEl.style.display = "none";
+
+    displayRoiValues(prediction, isLiveData);
+  };
+
+  // Display ROI values
+  const displayRoiValues = (prediction, isLiveData) => {
+    const capacity = Number(prediction.recommended_capacity);
+    const annualProjection = Number(prediction.annual_projection);
+
+    // Ensure finite values
+    if (!Number.isFinite(capacity) || !Number.isFinite(annualProjection)) {
+      showToast("Invalid prediction data. Using demo values.");
+      return;
+    }
 
     const installationCost = capacity * INSTALL_COST_PER_KW;
     const annualSavings = annualProjection * ELECTRICITY_TARIFF;
     const lifetimeSavings = annualSavings * SYSTEM_LIFETIME_YEARS;
-    const paybackYears = annualSavings > 0 ? installationCost / annualSavings : Infinity;
-    const roiPercentage = installationCost > 0 ? (annualSavings / installationCost) * 100 : NaN;
+    const paybackYears = annualSavings > 0 ? installationCost / annualSavings : 0;
+    const roiPercentage = installationCost > 0 ? (annualSavings / installationCost) * 100 : 0;
     const breakEvenDate = getBreakEvenDate(paybackYears);
+    const carbonReduction = (annualProjection / 1000) * CO2_REDUCTION_PER_MWH; // tons per year
 
+    // Update DOM
     if (installationCostEl) installationCostEl.textContent = formatINR(installationCost);
     if (annualSavingsEl) annualSavingsEl.textContent = formatINR(annualSavings);
     if (lifetimeSavingsEl) lifetimeSavingsEl.textContent = formatINR(lifetimeSavings);
@@ -161,6 +187,160 @@ document.addEventListener("DOMContentLoaded", function () {
     if (paybackPeriodEl) paybackPeriodEl.textContent = formatYears(paybackYears);
     if (investmentRecoveryEl) investmentRecoveryEl.textContent = formatYears(paybackYears);
     if (breakEvenDateEl) breakEvenDateEl.textContent = breakEvenDate;
+    if (carbonReductionEl) carbonReductionEl.textContent = carbonReduction.toFixed(1) + " tons/year";
+
+    // Update badge
+    if (dataBadgeEl) {
+      if (isLiveData) {
+        dataBadgeEl.className = "roi-badge roi-badge--live";
+        dataBadgeEl.textContent = "✓ Live Prediction Data";
+      } else {
+        dataBadgeEl.className = "roi-badge roi-badge--demo";
+        dataBadgeEl.textContent = "Demo Mode";
+      }
+    }
+
+    // Render charts
+    renderCharts(annualSavings, capacity, annualProjection);
+  };
+
+  // Chart rendering
+  let annualChart = null;
+  let lifetimeChart = null;
+
+  const renderCharts = (annualSavings, capacity, annualProjection) => {
+    renderAnnualSavingsChart(annualSavings);
+    renderLifetimeSavingsChart(annualSavings);
+  };
+
+  const renderAnnualSavingsChart = (annualSavings) => {
+    const ctx = document.getElementById("annualSavingsChart");
+    if (!ctx || typeof Chart === "undefined") return;
+
+    const years = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5"];
+    const data = [];
+    let cumulative = 0;
+    for (let i = 0; i < 5; i++) {
+      cumulative += annualSavings * (1 - i * 0.005); // slight degradation
+      data.push(Math.round(cumulative));
+    }
+
+    if (annualChart) {
+      annualChart.destroy();
+    }
+
+    try {
+      annualChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: years,
+          datasets: [
+            {
+              label: "Cumulative Savings (₹)",
+              data: data,
+              borderColor: "#10b981",
+              backgroundColor: "rgba(16, 185, 129, 0.1)",
+              borderWidth: 2,
+              fill: true,
+              tension: 0.4,
+              pointBackgroundColor: "#10b981",
+              pointBorderColor: "#ffffff",
+              pointBorderWidth: 2,
+              pointRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              labels: { color: "#d1d5db", font: { size: 12 } }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#9CA3AF", callback: (v) => "₹" + (v / 100000).toFixed(1) + "L" },
+              grid: { color: "rgba(255, 255, 255, 0.05)" }
+            },
+            x: {
+              ticks: { color: "#9CA3AF" },
+              grid: { color: "rgba(255, 255, 255, 0.05)" }
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.warn("Could not render annual savings chart:", err);
+    }
+  };
+
+  const renderLifetimeSavingsChart = (annualSavings) => {
+    const ctx = document.getElementById("lifetimeSavingsChart");
+    if (!ctx || typeof Chart === "undefined") return;
+
+    const labels = ["0-5 Yrs", "5-10 Yrs", "10-15 Yrs", "15-20 Yrs", "20-25 Yrs"];
+    const data = [];
+    for (let i = 0; i < 5; i++) {
+      let sum = 0;
+      for (let j = 0; j < 5; j++) {
+        const year = i * 5 + j;
+        sum += annualSavings * Math.pow(0.995, year); // degradation
+      }
+      data.push(Math.round(sum));
+    }
+
+    if (lifetimeChart) {
+      lifetimeChart.destroy();
+    }
+
+    try {
+      lifetimeChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "Savings by Period (₹)",
+              data: data,
+              backgroundColor: [
+                "rgba(16, 185, 129, 0.8)",
+                "rgba(16, 185, 129, 0.7)",
+                "rgba(16, 185, 129, 0.6)",
+                "rgba(16, 185, 129, 0.5)",
+                "rgba(16, 185, 129, 0.4)"
+              ],
+              borderColor: "#10b981",
+              borderWidth: 1,
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              labels: { color: "#d1d5db", font: { size: 12 } }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: "#9CA3AF", callback: (v) => "₹" + (v / 100000).toFixed(0) + "L" },
+              grid: { color: "rgba(255, 255, 255, 0.05)" }
+            },
+            x: {
+              ticks: { color: "#9CA3AF" },
+              grid: { color: "rgba(255, 255, 255, 0.05)" }
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.warn("Could not render lifetime savings chart:", err);
+    }
   };
 
   // Event listeners
@@ -241,6 +421,7 @@ document.addEventListener("DOMContentLoaded", function () {
           annual_projection: 11600,
           panel_count: 18,
           energy_coverage: 100,
+          potential_score: 91
         };
         try {
           localStorage.setItem("solarPrediction", JSON.stringify(prediction));
@@ -249,7 +430,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         loadRoiData();
-        showToast("Rooftop analysis complete.");
+        showToast("ROI Analysis Generated Successfully");
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = origHtml;
         if (downloadBtn) downloadBtn.disabled = false;
@@ -267,20 +448,37 @@ document.addEventListener("DOMContentLoaded", function () {
         coords = { lat: parts[0], lng: parts[1] };
       }
       downloadResultsAsText(DEMO_RESULTS, coords);
-      showToast("Analysis results downloaded.");
+      showToast("Analysis results downloaded successfully.");
     });
   }
 
-  // Initialize: try to load ROI if prediction already exists
+  // Recalculate button (if present)
+  const recalculateBtn = document.getElementById("recalculate-btn");
+  if (recalculateBtn) {
+    recalculateBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      loadRoiData();
+      showToast("ROI calculations updated.");
+    });
+  }
+
+  // Initialize: always load ROI with demo fallback
   loadRoiData();
 
-  // Provide safe initialization of results container if prediction exists
+  // Always show demo rooftop analysis results initially
   try {
     const existing = JSON.parse(localStorage.getItem("solarPrediction"));
     if (existing && existing.recommended_capacity) {
-      // if a prediction exists, show demo results to the panel (so cards aren't empty)
+      renderResults(DEMO_RESULTS);
+      if (downloadBtn) downloadBtn.disabled = false;
+    } else {
+      // Show demo results if no prediction exists
       renderResults(DEMO_RESULTS);
       if (downloadBtn) downloadBtn.disabled = false;
     }
-  } catch (err) {}
+  } catch (err) {
+    // Fallback: always show demo
+    renderResults(DEMO_RESULTS);
+    if (downloadBtn) downloadBtn.disabled = false;
+  }
 });

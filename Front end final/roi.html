@@ -76,7 +76,11 @@ Home
 <div id="roiMessage" class="card glass-card" style="display:none;margin-bottom:20px;">
 <p class="text-body text-muted">Generate a solar prediction first. Visit the Prediction page to analyze solar output and unlock your ROI insights.</p>
 </div>
-		<div id="roiContent">
+		<div id="roiContent" style="display:block;">
+			<!-- Data Source Badge -->
+			<div style="margin-bottom:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+				<span id="dataBadge" class="roi-badge roi-badge--live">Live Prediction Data</span>
+			</div>
 			<!-- Rooftop Analysis Controls -->
 			<section class="card glass-card" style="margin-bottom:16px; padding:18px;">
 				<div style="display:flex;flex-direction:column;gap:12px;">
@@ -118,25 +122,25 @@ Home
 
     <div class="card glass-card roi-stat-card">
         <div class="value-label">Installation Cost</div>
-        <div id="installationCost" class="value-large" style="margin-top:12px;">₹0</div>
+        <div id="installationCost" class="value-large roi-value-animate" style="margin-top:12px;">₹0</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Includes panels & installation</div>
     </div>
 
-    <div class="card glass-card roi-stat-card">
+    <div class="card glass-card roi-stat-card roi-highlight-savings">
         <div class="value-label">Annual Savings</div>
-        <div id="annualSavings" class="value-large" style="margin-top:12px;">₹0</div>
+        <div id="annualSavings" class="value-large roi-value-animate" style="margin-top:12px;color:#10b981;">₹0</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected savings based on output</div>
     </div>
 
-    <div class="card glass-card roi-stat-card">
+    <div class="card glass-card roi-stat-card roi-highlight-roi">
         <div class="value-label">ROI Percentage</div>
-        <div id="roiPercentage" class="value-large value-accent" style="margin-top:12px;">0%</div>
+        <div id="roiPercentage" class="value-large roi-value-animate" style="margin-top:12px;color:#10b981;">0%</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Strong return with current assumptions</div>
     </div>
 
     <div class="card glass-card roi-stat-card">
         <div class="value-label">Payback Period</div>
-        <div id="paybackPeriod" class="value-large" style="margin-top:12px;">0 yrs</div>
+        <div id="paybackPeriod" class="value-large roi-value-animate" style="margin-top:12px;">0 yrs</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Time to recover initial investment</div>
     </div>
 
@@ -146,13 +150,36 @@ Home
 			<section class="roi-highlight-grid" style="margin-bottom:16px;">
 				<div class="card glass-card roi-highlight-card">
 					<div class="value-label">Break-even Date</div>
-					<div id="breakEvenDate" class="value-large" style="margin-top:12px;">March 2031</div>
+					<div id="breakEvenDate" class="value-large roi-value-animate" style="margin-top:12px;">March 2031</div>
 					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected date when investment is recovered</div>
 				</div>
 				<div class="card glass-card roi-highlight-card">
 					<div class="value-label">Lifetime Savings</div>
-					<div id="lifetimeSavings" class="value-large" style="margin-top:12px;">₹4,50,000</div>
+					<div id="lifetimeSavings" class="value-large roi-value-animate" style="margin-top:12px;">₹4,50,000</div>
 					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Total savings over the system lifecycle</div>
+				</div>
+				<div class="card glass-card roi-highlight-card">
+					<div class="value-label">CO₂ Reduction</div>
+					<div id="carbonReduction" class="value-large roi-value-animate" style="margin-top:12px;color:#059669;">9.4 tons/year</div>
+					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Annual environmental impact reduction</div>
+				</div>
+			</section>
+
+			<!-- Charts Section -->
+			<section style="margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;">
+				<div class="card glass-card" style="padding:24px;">
+					<div style="margin-bottom:16px;">
+						<h4 style="margin:0;font-size:16px;font-weight:600;">Annual Savings Projection</h4>
+						<div style="font-size:13px;color:#9CA3AF;margin-top:4px;">5-year forecast</div>
+					</div>
+					<canvas id="annualSavingsChart" style="max-height:300px;"></canvas>
+				</div>
+				<div class="card glass-card" style="padding:24px;">
+					<div style="margin-bottom:16px;">
+						<h4 style="margin:0;font-size:16px;font-weight:600;">Lifetime Savings</h4>
+						<div style="font-size:13px;color:#9CA3AF;margin-top:4px;">25-year system lifecycle</div>
+					</div>
+					<canvas id="lifetimeSavingsChart" style="max-height:300px;"></canvas>
 				</div>
 			</section>
 
@@ -230,6 +257,7 @@ Home
 </footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 <script src="js/main.js"></script>
 <script src="js/roi.js"></script>
 </body>
