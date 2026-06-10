@@ -1,14 +1,15 @@
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-import traceback
 import os
 import pytesseract
 from PIL import Image
-import re
 
 from predict import predict
 from knowledge import knowledge_store
+
+# Use TESSERACT_CMD env var on Linux/Render; fall back to system PATH default
+pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
 
 app = Flask(__name__)
 CORS(app)
@@ -346,20 +347,18 @@ def compose_answer(question, prediction, roi, chunks):
 # ==========================
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
 
     print("\n" + "="*60)
     print("HelioSense AI Running")
-    print("Home       : http://https://heliosense-ai.onrender.com")
-    print("Prediction : http://https://heliosense-ai.onrender.com/prediction")
-    print("Health     : http://https://heliosense-ai.onrender.com/health")
+    print(f"Home       : http://localhost:{port}")
+    print(f"Prediction : http://localhost:{port}/prediction")
+    print(f"Health     : http://localhost:{port}/health")
     print("="*60 + "\n")
 
     app.run(
         host="0.0.0.0",
-        port=5000,
+        port=port,
         debug=True,
         use_reloader=False
     )
-pytesseract.pytesseract.tesseract_cmd = (
-    r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-)
