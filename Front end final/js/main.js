@@ -75,6 +75,18 @@
     });
   }
 
+  function showOcrResult(data) {
+    var block = document.getElementById('ocr-result');
+    if (!block) return;
+    var unitsEl  = document.getElementById('ocr-units');
+    var amountEl = document.getElementById('ocr-amount');
+    var periodEl = document.getElementById('ocr-period');
+    if (unitsEl)  unitsEl.textContent  = data.units_consumed != null ? data.units_consumed + ' kWh' : 'Not detected';
+    if (amountEl) amountEl.textContent = data.bill_amount    != null ? '₹' + data.bill_amount.toLocaleString('en-IN') : 'Not detected';
+    if (periodEl) periodEl.textContent = data.billing_period || 'Not detected';
+    block.style.display = 'block';
+  }
+
   function showEnergyOutput(data) {
     document.getElementById('val-capacity').textContent = data.capacity;
     document.getElementById('val-panels').textContent = data.panels;
@@ -127,6 +139,7 @@
     var resetBtn = document.getElementById('reset-btn');
     var kwhInput = document.getElementById('monthly-kwh');
     var billInput = document.getElementById('monthly-bill');
+    var _ocrData = null;
 
     function setFile(file) {
       if (file) fileName.textContent = file.name;
@@ -165,29 +178,50 @@
         var orig = uploadBtn.innerHTML;
         uploadBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Uploading...';
         uploadBtn.disabled = true;
-        setTimeout(function () {
-          uploadBtn.innerHTML = orig;
-          uploadBtn.disabled = false;
-          fileName.textContent = fileInput.files[0].name + ' — Uploaded';
-        }, 1200);
+        _ocrData = null;
+
+        var formData = new FormData();
+        formData.append('bill', fileInput.files[0]);
+
+        fetch(API_BASE_URL + '/upload-bill', { method: 'POST', body: formData })
+          .then(function (resp) {
+            if (!resp.ok) throw new Error('Server error ' + resp.status);
+            return resp.json();
+          })
+          .then(function (data) {
+            if (data.success) {
+              _ocrData = data;
+              fileName.textContent = fileInput.files[0].name + ' — Uploaded';
+              showOcrResult(data);
+              showToast('Bill uploaded. Click Analyze Bill for recommendations.');
+            } else {
+              fileName.textContent = 'Upload failed';
+              showToast('OCR failed: ' + (data.error || 'Unknown error'), 5000);
+            }
+          })
+          .catch(function (err) {
+            fileName.textContent = 'Upload error';
+            showToast('Upload error: ' + err.message, 5000);
+          })
+          .finally(function () {
+            uploadBtn.innerHTML = orig;
+            uploadBtn.disabled = false;
+          });
       });
     }
     if (analyzeBtn) {
       analyzeBtn.addEventListener('click', function () {
-        var orig = analyzeBtn.innerHTML;
-        analyzeBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">progress_activity</span> Analyzing...';
-        analyzeBtn.disabled = true;
-        setTimeout(function () {
-          analyzeBtn.innerHTML = orig;
-          analyzeBtn.disabled = false;
-          showEnergyOutput({
-            capacity: '3 kW System',
-            panels: '6 Panels',
-            monthly: '360 kWh/month',
-            annual: '4320 kWh/year',
-            savings: '₹18,000/year'
-          });
-        }, 1800);
+        if (!_ocrData) {
+          showToast('Please upload a bill first.', 4000);
+          return;
+        }
+        var kwh = _ocrData.units_consumed || 0;
+        var bill = _ocrData.bill_amount || 0;
+        if (kwh <= 0) {
+          showToast('Could not extract usage from bill. Try manual entry.', 5000);
+          return;
+        }
+        showEnergyOutput(calculateFromConsumption(kwh, bill));
       });
     }
     if (calculateBtn) {

@@ -2,11 +2,13 @@ from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
 import os
+import re
 import pytesseract
 from PIL import Image
 
 from predict import predict
 from knowledge import knowledge_store
+from rooftop_analysis import analyze_rooftop
 
 # Use TESSERACT_CMD env var on Linux/Render; fall back to system PATH default
 pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
@@ -73,18 +75,81 @@ def debug():
         "exists": os.path.exists(FRONTEND_FOLDER),
         "files": os.listdir(FRONTEND_FOLDER) if os.path.exists(FRONTEND_FOLDER) else []
     })
+def parse_bill_text(text):
+    units_consumed = None
+    bill_amount = None
+    billing_period = None
+
+    unit_patterns = [
+        r'units?\s+consumed[:\s]+(\d+(?:\.\d+)?)',
+        r'energy\s+consumed[:\s]+(\d+(?:\.\d+)?)',
+        r'consumption[:\s]+(\d+(?:\.\d+)?)\s*kwh',
+        r'(\d+(?:\.\d+)?)\s+units?\b',
+    ]
+    for pat in unit_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            try:
+                units_consumed = float(m.group(1))
+                break
+            except ValueError:
+                pass
+
+    amount_patterns = [
+        r'(?:net\s+)?bill\s+amount[:\s]+(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)',
+        r'total\s+amount[:\s]+(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)',
+        r'amount\s+payable[:\s]+(?:rs\.?\s*)?(\d[\d,]*(?:\.\d+)?)',
+        r'(?:rs\.?|₹)\s*(\d[\d,]*(?:\.\d+)?)',
+    ]
+    for pat in amount_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            try:
+                bill_amount = float(m.group(1).replace(',', ''))
+                break
+            except ValueError:
+                pass
+
+    period_patterns = [
+        r'billing\s+period[:\s]+(.+?)(?:\n|$)',
+        r'(?:from|period)[:\s]+(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4})\s+to\s+(\d{1,2}[/.\-]\d{1,2}[/.\-]\d{2,4})',
+        r'(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}',
+    ]
+    for pat in period_patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            billing_period = (f"{m.group(1)} to {m.group(2)}" if m.lastindex == 2 else m.group(1)).strip()
+            break
+
+    return units_consumed, bill_amount, billing_period
+
+
 @app.route("/upload-bill", methods=["POST"])
 def upload_bill():
     try:
+        if 'bill' not in request.files:
+            return jsonify({"success": False, "error": "No file provided"}), 400
+
         file = request.files["bill"]
+        filename = (file.filename or '').lower()
+
+        if filename.endswith('.pdf'):
+            return jsonify({
+                "success": False,
+                "error": "PDF files are not supported. Please upload a JPG or PNG image of your bill."
+            }), 400
 
         image = Image.open(file)
-
         text = pytesseract.image_to_string(image)
+
+        units_consumed, bill_amount, billing_period = parse_bill_text(text)
 
         return jsonify({
             "success": True,
-            "text": text
+            "text": text,
+            "units_consumed": units_consumed,
+            "bill_amount": bill_amount,
+            "billing_period": billing_period
         })
 
     except Exception as e:
@@ -92,6 +157,20 @@ def upload_bill():
             "success": False,
             "error": str(e)
         }), 500
+# ==========================
+# ROOFTOP ANALYSIS API
+# ==========================
+
+@app.route('/analyze-rooftop', methods=['POST'])
+def analyze_rooftop_endpoint():
+    try:
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'No image file provided'}), 400
+        result = analyze_rooftop(request.files['image'])
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ==========================
 # STATIC FILES
 # ==========================

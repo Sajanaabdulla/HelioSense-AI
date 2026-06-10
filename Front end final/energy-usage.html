@@ -95,7 +95,24 @@ Home
 <p class="text-body text-muted mb-2">Drag and drop your KSEB bill here</p>
 <p class="text-label text-muted" id="bill-file-name">No file selected</p>
 </div>
-<input class="hidden" id="bill-file-input" type="file" accept=".pdf,.jpg,.jpeg,.png"/>
+<input class="hidden" id="bill-file-input" type="file" accept=".jpg,.jpeg,.png"/>
+<div id="ocr-result" class="mb-4" style="display:none;background:rgba(250,204,21,0.05);border:1px solid rgba(250,204,21,0.18);border-radius:8px;padding:16px">
+  <p class="text-label text-muted mb-3" style="font-size:11px;letter-spacing:.06em;text-transform:uppercase">Extracted Bill Data</p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    <div>
+      <p class="text-label text-muted">Units Consumed</p>
+      <p class="text-bold" id="ocr-units">—</p>
+    </div>
+    <div>
+      <p class="text-label text-muted">Bill Amount</p>
+      <p class="text-bold" id="ocr-amount">—</p>
+    </div>
+    <div>
+      <p class="text-label text-muted">Billing Period</p>
+      <p class="text-bold" id="ocr-period">—</p>
+    </div>
+  </div>
+</div>
 <div class="page-actions">
 <button class="btn btn--outline btn--md flex-1" id="choose-bill-btn" type="button">
 <span class="material-symbols-outlined">folder_open</span>
