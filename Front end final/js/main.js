@@ -570,7 +570,11 @@ function initSolarPrediction() {
 
     if (storedPrediction && typeof storedPrediction === "object") {
       console.log("Stored solar prediction loaded:", storedPrediction);
-      updateDashboardCards(storedPrediction);
+      try {
+        updateDashboardCards(storedPrediction);
+      } catch (error) {
+        console.error("Dashboard update failed:", error);
+      }
     }
 
     return storedPrediction;
@@ -741,7 +745,11 @@ function initSolarPrediction() {
             co2_reduction: '9.4 tons/year'
           };
 
-          updateDashboardCards(demoResult);
+          try {
+            updateDashboardCards(demoResult);
+          } catch (error) {
+            console.error("Dashboard update failed:", error);
+          }
           try { localStorage.setItem('solarPrediction', JSON.stringify(demoResult)); } catch (e) { console.warn('Could not save prediction', e); }
           showToast('Prediction generated successfully.');
         } else {
@@ -763,7 +771,11 @@ function initSolarPrediction() {
               throw new Error('Prediction API error: ' + predictionResp.status);
             }
             var result = await predictionResp.json();
-            updateDashboardCards(result);
+            try {
+              updateDashboardCards(result);
+            } catch (error) {
+              console.error("Dashboard update failed:", error);
+            }
             try { localStorage.setItem('solarPrediction', JSON.stringify(result)); } catch (e) { console.warn('Could not save prediction', e); }
             showToast('Prediction generated successfully.');
           } catch (backendErr) {
@@ -780,7 +792,11 @@ function initSolarPrediction() {
               estimated_savings: '₹72,000/year',
               co2_reduction: '9.4 tons/year'
             };
-            updateDashboardCards(demoResult2);
+            try {
+              updateDashboardCards(demoResult2);
+            } catch (error) {
+              console.error("Dashboard update failed:", error);
+            }
             try { localStorage.setItem('solarPrediction', JSON.stringify(demoResult2)); } catch (e) { console.warn('Could not save prediction', e); }
             showToast('Prediction generated successfully.');
           }
@@ -799,7 +815,11 @@ function initSolarPrediction() {
           estimated_savings: '₹72,000/year',
           co2_reduction: '9.4 tons/year'
         };
-        updateDashboardCards(fallback);
+        try {
+          updateDashboardCards(fallback);
+        } catch (error) {
+          console.error("Dashboard update failed:", error);
+        }
         try { localStorage.setItem('solarPrediction', JSON.stringify(fallback)); } catch (e) { console.warn('Could not save prediction', e); }
         showToast('Prediction generated successfully.');
       } finally {
@@ -816,35 +836,38 @@ function initSolarPrediction() {
 // Update Dashboard Cards with Backend Results
 // ============================================================================
 function updateDashboardCards(result) {
-  // Map backend keys to DOM element IDs and format values
+  if (!result || typeof result !== 'object') {
+    console.warn("No prediction result available");
+    result = {};
+  }
+
   const updates = {
     "potentialScore": {
-      value: result.potential_score ? `${result.potential_score}` : "N/A",
+      value: result.potential_score != null ? `${result.potential_score}` : "N/A",
       element: document.getElementById("potentialScore")
     },
     "peakSunHours": {
-      value: result.peak_sun_hours ? `${result.peak_sun_hours} hrs/day` : "N/A",
+      value: result.peak_sun_hours != null ? `${result.peak_sun_hours} hrs/day` : "N/A",
       element: document.getElementById("peakSunHours")
     },
     "solarCapacity": {
-      value: result.recommended_capacity ? `${result.recommended_capacity} kW` : "N/A",
+      value: result.recommended_capacity != null ? `${result.recommended_capacity} kW` : "N/A",
       element: document.getElementById("solarCapacity")
     },
     "panelCount": {
-      value: result.panel_count ? `${result.panel_count} Panels` : "N/A",
+      value: result.panel_count != null ? `${result.panel_count} Panels` : "N/A",
       element: document.getElementById("panelCount")
     },
     "energyCoverage": {
-      value: result.energy_coverage ? `${result.energy_coverage}%` : "N/A",
+      value: result.energy_coverage != null ? `${result.energy_coverage}%` : "N/A",
       element: document.getElementById("energyCoverage")
     },
     "annualProjection": {
-      value: result.annual_projection ? `${result.annual_projection} kWh/year` : "N/A",
+      value: result.annual_projection != null ? `${result.annual_projection} kWh/year` : "N/A",
       element: document.getElementById("annualProjection")
     }
   };
 
-  // Update each element if it exists
   for (const [key, data] of Object.entries(updates)) {
     if (data.element) {
       data.element.textContent = data.value;
@@ -854,7 +877,6 @@ function updateDashboardCards(result) {
     }
   }
 
-  // Log full result for debugging
   const progressElement = document.getElementById("suitabilityProgress");
   if (progressElement && typeof result.potential_score === 'number') {
     progressElement.style.width = `${Math.min(100, Math.max(0, result.potential_score))}%`;
@@ -866,8 +888,10 @@ function updateDashboardCards(result) {
     const values = months.map((m) => parseFloat(result.monthly_generation[m] || 0));
     const maxValue = Math.max(...values, 1);
     barElements.forEach(function (bar, index) {
-      const height = Math.round((values[index] || 0) / maxValue * 100);
-      bar.style.height = `${height}%`;
+      if (bar) {
+        const height = Math.round((values[index] || 0) / maxValue * 100);
+        bar.style.height = `${height}%`;
+      }
     });
   }
 
@@ -879,6 +903,5 @@ function updateDashboardCards(result) {
     }
   }
 
-  // Log full result for debugging
   console.log("All prediction data:", result);
 }
