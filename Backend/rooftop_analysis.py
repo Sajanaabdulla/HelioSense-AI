@@ -1,5 +1,6 @@
 import os
 import base64
+import threading
 import numpy as np
 import cv2
 from PIL import Image
@@ -9,21 +10,33 @@ YOLO_MODEL_PATH = os.path.abspath(
     os.path.join(BASE_DIR, '..', 'runs', 'detect', 'train-2', 'weights', 'best.pt')
 )
 
+# Lazy-loaded on first /analyze-rooftop request; None if unavailable.
 _yolo_model = None
 _yolo_attempted = False
+_yolo_lock = threading.Lock()
 
 
 def _get_yolo():
+    """Return the cached YOLO model, loading it on the first call.
+
+    Never called at import time — only from _detect_obstructions_yolo(),
+    which is only called from analyze_rooftop(), which is only called from
+    the /analyze-rooftop endpoint. The lock prevents a double-load race
+    when two requests arrive simultaneously before the first load finishes.
+    """
     global _yolo_model, _yolo_attempted
     if _yolo_attempted:
         return _yolo_model
-    _yolo_attempted = True
-    try:
-        from ultralytics import YOLO
-        if os.path.exists(YOLO_MODEL_PATH):
-            _yolo_model = YOLO(YOLO_MODEL_PATH)
-    except Exception:
-        pass
+    with _yolo_lock:
+        if _yolo_attempted:          # re-check after acquiring lock
+            return _yolo_model
+        _yolo_attempted = True
+        try:
+            from ultralytics import YOLO
+            if os.path.exists(YOLO_MODEL_PATH):
+                _yolo_model = YOLO(YOLO_MODEL_PATH)
+        except Exception:
+            pass                     # falls back to OpenCV-only analysis
     return _yolo_model
 
 

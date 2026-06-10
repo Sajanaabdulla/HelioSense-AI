@@ -8,7 +8,6 @@ from PIL import Image
 
 from predict import predict
 from knowledge import knowledge_store
-from rooftop_analysis import analyze_rooftop
 
 # Use TESSERACT_CMD env var on Linux/Render; fall back to system PATH default
 pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
@@ -163,6 +162,10 @@ def upload_bill():
 
 @app.route('/analyze-rooftop', methods=['POST'])
 def analyze_rooftop_endpoint():
+    try:
+        from rooftop_analysis import analyze_rooftop
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Analysis module unavailable: ' + str(e)}), 503
     try:
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
