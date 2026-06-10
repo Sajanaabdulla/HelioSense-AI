@@ -70,6 +70,7 @@ Home
 						<p class="text-label text-muted">Strategic Investment Analysis</p>
 					</div>
 				</div>
+			</div>
 			</header>
 
 <main class="page-content space-y-8">
@@ -164,15 +165,15 @@ Home
 						<div>
 							<div class="value-label">Utility Inflation Rate</div>
 							<div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
-								<input type="range" min="0" max="10" step="0.5" value="4.5" style="flex:1;" />
-								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;">4.5%</div>
+								<input type="range" min="0" max="10" step="0.5" value="4.5" style="flex:1;" id="inflationSlider"/>
+								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;" id="inflationDisplay">4.5%</div>
 							</div>
 						</div>
 						<div>
 							<div class="value-label">Panel Degradation</div>
 							<div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
-								<input type="range" min="0" max="2" step="0.1" value="0.5" style="flex:1;" />
-								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;">0.5%</div>
+								<input type="range" min="0" max="2" step="0.1" value="0.5" style="flex:1;" id="degradationSlider"/>
+								<div style="width:48px;text-align:right;color:#9CA3AF;font-size:13px;" id="degradationDisplay">0.5%</div>
 							</div>
 						</div>
 						<div>
@@ -196,21 +197,21 @@ Home
 					<div class="insight-grid">
 						<div class="insight-card" style="padding:18px;">
 							<div class="value-label">ROI Rating</div>
-							<div class="value-large value-accent" style="margin-top:10px;">Good</div>
-							<div class="insight-chip chip--success" style="margin-top:12px;">Excellent</div>
-							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Performance is strong for the current plan.</div>
+							<div id="insightRatingValue" class="value-large value-accent" style="margin-top:10px;">Good</div>
+							<div id="insightRatingChip" class="insight-chip chip--success" style="margin-top:12px;">Excellent</div>
+							<div id="insightRatingDesc" style="margin-top:10px;color:#9CA3AF;font-size:13px;">Performance is strong for the current plan.</div>
 						</div>
 						<div class="insight-card" style="padding:18px;">
 							<div class="value-label">Financial Recommendation</div>
-							<div class="value-large" style="margin-top:10px;color:#f59e0b;">Review</div>
-							<div class="insight-chip chip--warning" style="margin-top:12px;">Review</div>
-							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Fine-tune assumptions before final approval.</div>
+							<div id="insightRecommendValue" class="value-large" style="margin-top:10px;color:#f59e0b;">Review</div>
+							<div id="insightRecommendChip" class="insight-chip chip--warning" style="margin-top:12px;">Review</div>
+							<div id="insightRecommendDesc" style="margin-top:10px;color:#9CA3AF;font-size:13px;">Fine-tune assumptions before final approval.</div>
 						</div>
 						<div class="insight-card" style="padding:18px;">
 							<div class="value-label">Risk Level</div>
-							<div class="value-large value-warning" style="margin-top:10px;">Moderate</div>
-							<div class="insight-chip chip--warning" style="margin-top:12px;">Moderate</div>
-							<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Main exposure is tariff and policy movement.</div>
+							<div id="insightRiskValue" class="value-large value-warning" style="margin-top:10px;">Moderate</div>
+							<div id="insightRiskChip" class="insight-chip chip--warning" style="margin-top:12px;">Moderate</div>
+							<div id="insightRiskDesc" style="margin-top:10px;color:#9CA3AF;font-size:13px;">Main exposure is tariff and policy movement.</div>
 						</div>
 					</div>
 				</div>
