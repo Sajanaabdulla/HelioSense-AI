@@ -559,6 +559,8 @@ function initSolarPrediction() {
   if (!selectedCityName) console.error("Missing: selectedCityName");
   if (!predictBtn) console.error("Missing: predictBtn");
 
+  var gpsCoords = null;
+
   const loadStoredPrediction = () => {
     let storedPrediction = null;
     try {
@@ -633,11 +635,11 @@ function initSolarPrediction() {
       navigator.geolocation.getCurrentPosition(
         function(position) {
           try {
-            const lat = position.coords.latitude.toFixed(6);
-            const lon = position.coords.longitude.toFixed(6);
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            gpsCoords = { lat: lat, lon: lon };
             console.log('Geolocation success', { lat, lon });
 
-            // For demo mode we do NOT call external weather APIs. Use a friendly label.
             var cityLabel = 'Current Location';
             if (cityInput) cityInput.value = cityLabel;
             if (selectedCityName) selectedCityName.textContent = cityLabel;
@@ -674,6 +676,7 @@ function initSolarPrediction() {
   if (cityInput) {
     cityInput.addEventListener("change", function() {
       const city = cityInput.value.trim();
+      gpsCoords = null;
       if (city) {
         if (selectedCityName) selectedCityName.textContent = city;
         if (selectedLocation) selectedLocation.style.display = "block";
@@ -696,7 +699,7 @@ function initSolarPrediction() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // BUTTON 3: "Analyze Solar Potential" — ONE consolidated listener
+  // BUTTON 3: "Analyze Solar Potential" — real backend, no demo fallback
   // ─────────────────────────────────────────────────────────────────────────
   if (predictBtn) {
     predictBtn.addEventListener('click', async function () {
@@ -707,124 +710,82 @@ function initSolarPrediction() {
       }
 
       predictBtn.disabled = true;
-      var originalText = predictBtn.textContent;
+      var originalHTML = predictBtn.innerHTML;
       predictBtn.innerHTML = '<span style="margin-right:8px;">⏳</span>Analyzing...';
 
       try {
-        // Attempt to fetch weather, but DO NOT block prediction on external API failure.
-        var weatherData = null;
+        // Step 1: Fetch live weather for the selected location.
+        // GPS mode uses coordinates; manual mode uses city name.
+        var weatherUrl = gpsCoords
+          ? `https://api.openweathermap.org/data/2.5/weather?lat=${gpsCoords.lat}&lon=${gpsCoords.lon}&appid=${WEATHER_API_KEY}&units=metric`
+          : `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+
+        var weatherResponse;
         try {
-          var weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
-          var weatherResponse = await fetch(weatherUrl, { cache: 'no-store' });
-          if (weatherResponse.ok) {
-            weatherData = await weatherResponse.json();
-            console.log('Weather data fetched:', weatherData);
-          } else {
-            // Log and fall back to demo
-            console.error('Weather API responded with status', weatherResponse.status);
-            weatherData = null;
-          }
-        } catch (weatherErr) {
-          console.error('Weather API fetch error:', weatherErr);
-          weatherData = null;
+          weatherResponse = await fetch(weatherUrl, { cache: 'no-store' });
+        } catch (networkErr) {
+          console.error('Weather fetch network error:', networkErr);
+          showToast('Network error — could not reach weather service. Check your connection.', 5000);
+          return;
         }
 
-        // If weatherData is null, switch to demo prediction mode (no external dependency).
-        if (!weatherData) {
-          console.log('Switching to demo prediction mode for', city);
-
-          var demoResult = {
-            potential_score: 91,
-            peak_sun_hours: 5.8,
-            annual_projection: 11600,
-            recommended_capacity: 8,
-            panel_count: 18,
-            energy_coverage: 100,
-            location: city,
-            estimated_savings: '₹72,000/year',
-            co2_reduction: '9.4 tons/year'
-          };
-
-          try {
-            updateDashboardCards(demoResult);
-          } catch (error) {
-            console.error("Dashboard update failed:", error);
-          }
-          try { localStorage.setItem('solarPrediction', JSON.stringify(demoResult)); } catch (e) { console.warn('Could not save prediction', e); }
-          showToast('Prediction generated successfully.');
-        } else {
-          // If weather fetched successfully, attempt backend prediction; errors will fallback to demo below
-          try {
-            var latitude = weatherData.coord && weatherData.coord.lat;
-            var longitude = weatherData.coord && weatherData.coord.lon;
-            var temperature = weatherData.main && weatherData.main.temp;
-            var humidity = weatherData.main && weatherData.main.humidity;
-            var wind_speed = (weatherData.wind && weatherData.wind.speed) || 0;
-
-            var predictionResp = await fetch(`${API_BASE_URL}/predict-solar`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ latitude, longitude, temperature, humidity, wind_speed })
-            });
-
-            if (!predictionResp.ok) {
-              throw new Error('Prediction API error: ' + predictionResp.status);
-            }
-            var result = await predictionResp.json();
-            try {
-              updateDashboardCards(result);
-            } catch (error) {
-              console.error("Dashboard update failed:", error);
-            }
-            try { localStorage.setItem('solarPrediction', JSON.stringify(result)); } catch (e) { console.warn('Could not save prediction', e); }
-            showToast('Prediction generated successfully.');
-          } catch (backendErr) {
-            console.error('Backend prediction error:', backendErr);
-            // Fallback to demo
-            var demoResult2 = {
-              potential_score: 91,
-              peak_sun_hours: 5.8,
-              annual_projection: 11600,
-              recommended_capacity: 8,
-              panel_count: 18,
-              energy_coverage: 100,
-              location: city,
-              estimated_savings: '₹72,000/year',
-              co2_reduction: '9.4 tons/year'
-            };
-            try {
-              updateDashboardCards(demoResult2);
-            } catch (error) {
-              console.error("Dashboard update failed:", error);
-            }
-            try { localStorage.setItem('solarPrediction', JSON.stringify(demoResult2)); } catch (e) { console.warn('Could not save prediction', e); }
-            showToast('Prediction generated successfully.');
-          }
+        if (!weatherResponse.ok) {
+          var errMsg = weatherResponse.status === 404
+            ? `Location "${city}" not found. Try a different city name.`
+            : `Weather service error (${weatherResponse.status}). Please try again.`;
+          showToast(errMsg, 5000);
+          return;
         }
-      } catch (err) {
-        console.error('Error during prediction flow:', err);
-        // Never show API errors to users; fallback to demo
-        var fallback = {
-          potential_score: 91,
-          peak_sun_hours: 5.8,
-          annual_projection: 11600,
-          recommended_capacity: 8,
-          panel_count: 18,
-          energy_coverage: 100,
-          location: city,
-          estimated_savings: '₹72,000/year',
-          co2_reduction: '9.4 tons/year'
-        };
+
+        var weatherData = await weatherResponse.json();
+        console.log('Weather data fetched:', weatherData);
+
+        // Step 2: POST all parameters to the real /predict-solar backend.
+        var latitude  = gpsCoords ? gpsCoords.lat : weatherData.coord.lat;
+        var longitude = gpsCoords ? gpsCoords.lon : weatherData.coord.lon;
+        var temperature = weatherData.main.temp;
+        var humidity    = weatherData.main.humidity;
+        var wind_speed  = (weatherData.wind && weatherData.wind.speed) || 0;
+
+        var predictionResp;
         try {
-          updateDashboardCards(fallback);
-        } catch (error) {
-          console.error("Dashboard update failed:", error);
+          predictionResp = await fetch(`${API_BASE_URL}/predict-solar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude, longitude, temperature, humidity, wind_speed })
+          });
+        } catch (networkErr) {
+          console.error('Prediction fetch network error:', networkErr);
+          showToast('Network error — could not reach prediction service. Check your connection.', 5000);
+          return;
         }
-        try { localStorage.setItem('solarPrediction', JSON.stringify(fallback)); } catch (e) { console.warn('Could not save prediction', e); }
+
+        if (!predictionResp.ok) {
+          var errData = {};
+          try { errData = await predictionResp.json(); } catch (e) {}
+          var hint = errData.hint ? ' ' + errData.hint : '';
+          showToast((errData.error || `Prediction failed (${predictionResp.status}).`) + hint, 5000);
+          return;
+        }
+
+        var result = await predictionResp.json();
+
+        if (result.error) {
+          showToast(result.error, 5000);
+          return;
+        }
+
+        // Step 3: Update all dashboard cards and persist the result.
+        updateDashboardCards(result);
+        try { localStorage.setItem('solarPrediction', JSON.stringify(result)); } catch (e) { console.warn('Could not save prediction', e); }
         showToast('Prediction generated successfully.');
+
+      } catch (err) {
+        console.error('Unexpected prediction error:', err);
+        showToast('An unexpected error occurred. Please try again.', 5000);
       } finally {
         predictBtn.disabled = false;
-        predictBtn.innerHTML = originalText;
+        predictBtn.innerHTML = originalHTML;
       }
     });
   }
@@ -840,6 +801,17 @@ function updateDashboardCards(result) {
     console.warn("No prediction result available");
     result = {};
   }
+
+  var ELECTRICITY_TARIFF_INR = 7;
+  var CO2_TONS_PER_MWH = 1.04;
+
+  var annualKwh = result.annual_projection != null ? Number(result.annual_projection) : null;
+  var estimatedSavingsValue = annualKwh != null
+    ? '₹' + Math.round(annualKwh * ELECTRICITY_TARIFF_INR).toLocaleString('en-IN') + '/year'
+    : 'N/A';
+  var co2Value = annualKwh != null
+    ? ((annualKwh / 1000) * CO2_TONS_PER_MWH).toFixed(1) + ' tons/year'
+    : 'N/A';
 
   const updates = {
     "potentialScore": {
@@ -863,8 +835,16 @@ function updateDashboardCards(result) {
       element: document.getElementById("energyCoverage")
     },
     "annualProjection": {
-      value: result.annual_projection != null ? `${result.annual_projection} kWh/year` : "N/A",
+      value: annualKwh != null ? `${annualKwh} kWh/year` : "N/A",
       element: document.getElementById("annualProjection")
+    },
+    "estimatedSavings": {
+      value: estimatedSavingsValue,
+      element: document.getElementById("estimatedSavings")
+    },
+    "co2Reduction": {
+      value: co2Value,
+      element: document.getElementById("co2Reduction")
     }
   };
 
@@ -883,6 +863,7 @@ function updateDashboardCards(result) {
   }
 
   if (result.monthly_generation && typeof result.monthly_generation === 'object') {
+    // Dashboard bar chart — Jan through Jun
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
     const barElements = document.querySelectorAll('.chart-bar');
     const values = months.map((m) => parseFloat(result.monthly_generation[m] || 0));
@@ -891,6 +872,32 @@ function updateDashboardCards(result) {
       if (bar) {
         const height = Math.round((values[index] || 0) / maxValue * 100);
         bar.style.height = `${height}%`;
+      }
+    });
+
+    // Prediction page quarterly bar chart — Q1..Q4 from monthly_generation
+    var quarters = [
+      ['Jan', 'Feb', 'Mar'],
+      ['Apr', 'May', 'Jun'],
+      ['Jul', 'Aug', 'Sep'],
+      ['Oct', 'Nov', 'Dec']
+    ];
+    var qLabels = ['Q1', 'Q2', 'Q3', 'Q4'];
+    var qTotals = quarters.map(function (ms) {
+      return ms.reduce(function (sum, m) { return sum + (parseFloat(result.monthly_generation[m]) || 0); }, 0);
+    });
+    var maxQ = Math.max.apply(null, qTotals.concat([1]));
+    var predBars   = document.querySelectorAll('.prediction-chart-bar__col');
+    var predLabels = document.querySelectorAll('.prediction-chart-bar .chart-label');
+    predBars.forEach(function (bar, i) {
+      if (i < qTotals.length) {
+        bar.style.height = Math.round((qTotals[i] / maxQ) * 100) + '%';
+      }
+    });
+    predLabels.forEach(function (label, i) {
+      if (i < qLabels.length) {
+        label.textContent = qLabels[i];
+        label.className = 'chart-label' + (i === 3 ? ' text-accent text-bold' : '');
       }
     });
   }
