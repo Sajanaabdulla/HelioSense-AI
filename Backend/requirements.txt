@@ -10,6 +10,7 @@ joblib==1.5.3
 MarkupSafe==3.0.3
 narwhals==2.22.1
 numpy==2.4.6
+opencv-python-headless==4.13.0.92
 pandas==3.0.3
 PyPDF2==3.0.1
 pdfplumber==0.11.9
@@ -22,4 +23,5 @@ scipy==1.17.1
 six==1.17.0
 threadpoolctl==3.6.0
 tzdata==2026.2
+ultralytics==8.4.62
 Werkzeug==3.1.8
