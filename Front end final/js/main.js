@@ -996,10 +996,24 @@ function initSolarPrediction() {
 
         console.log('[prediction] /predict-solar status:', predictionResp.status);
         console.log('[prediction] response URL:', predictionResp.url);
+        console.log('[prediction] response content-type:', predictionResp.headers.get('content-type'));
+        console.log('[prediction] response content-length:', predictionResp.headers.get('content-length'));
+
+        // Read as raw text first so we can log exactly what arrived before parsing
+        var _rawBody;
+        try {
+          _rawBody = await predictionResp.text();
+        } catch (_textErr) {
+          console.error('[prediction] Failed to read response body:', _textErr);
+          showToast('Could not read response from prediction service.', 5000);
+          return;
+        }
+        console.log('[prediction] raw response length:', _rawBody.length);
+        console.log('[prediction] raw response:', _rawBody);
 
         if (!predictionResp.ok) {
           var errData = {};
-          try { errData = await predictionResp.json(); } catch (e) {}
+          try { errData = JSON.parse(_rawBody); } catch (e) {}
           console.error('[prediction] Prediction API error:', predictionResp.status, errData);
           var hint = errData.hint ? ' ' + errData.hint : '';
           showToast((errData.error || 'Prediction failed (' + predictionResp.status + ').') + hint, 6000);
@@ -1008,9 +1022,10 @@ function initSolarPrediction() {
 
         var result;
         try {
-          result = await predictionResp.json();
+          result = JSON.parse(_rawBody);
         } catch (parseErr) {
-          console.error('[prediction] Failed to parse prediction response:', parseErr);
+          console.error('[prediction] JSON parse error:', parseErr.message);
+          console.error('[prediction] raw body (first 500 chars):', _rawBody ? _rawBody.slice(0, 500) : '(empty)');
           showToast('Invalid response from prediction service.', 5000);
           return;
         }

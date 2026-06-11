@@ -296,6 +296,7 @@ def predict_solar():
         try:
             _body_str = _json.dumps(result)
             print("[predict-solar] returning: JSON OK, byte count:", len(_body_str))
+            print("[predict-solar] Content-Type will be: application/json")
             print("[predict-solar] returning:", result)
         except (TypeError, ValueError) as _json_err:
             print("[predict-solar] JSON SERIALISATION FAILED:", type(_json_err).__name__, str(_json_err))
@@ -303,7 +304,14 @@ def predict_solar():
             # Surface as a proper 500 with a body so the browser never gets an empty 200
             return jsonify({"error": "Internal serialisation error", "detail": str(_json_err)}), 500
 
-        return jsonify(result)
+        resp = jsonify(result)
+        print(
+            "[predict-solar] response object: status=%s content_type=%s content_length=%s",
+            resp.status_code,
+            resp.content_type,
+            resp.content_length,
+        )
+        return resp
 
     except FileNotFoundError as e:
         print("[predict-solar] returning: FileNotFoundError —", str(e))
