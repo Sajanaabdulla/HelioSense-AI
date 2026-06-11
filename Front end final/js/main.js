@@ -248,8 +248,10 @@
 
   const CHAT_HISTORY_KEY = 'heliaChatHistory';
   const HELIA_USER_KEY = 'heliaUser';
-  const API_BASE_URL = window.HELIOSENSE_API_URL ||
-    (window.location.port === '5500' ? 'http://localhost:5000' : '');
+  const API_BASE_URL =
+    (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost")
+      ? "http://127.0.0.1:5000"
+      : "https://heliosense-ai-1.onrender.com";
   const CHAT_ENDPOINT = `${API_BASE_URL}/chat-query`;
 
   function logDebug(label, value) {
@@ -621,6 +623,62 @@
     }
   }
 
+  function populateReportSummary() {
+    var prediction = null, rooftop = null;
+    try { prediction = JSON.parse(localStorage.getItem('solarPrediction')); } catch(e) {}
+    try { rooftop   = JSON.parse(localStorage.getItem('rooftopAnalysis'));  } catch(e) {}
+
+    var suitEl  = document.getElementById('report-suitability-score');
+    var capEl   = document.getElementById('report-capacity');
+    var genEl   = document.getElementById('report-annual-gen');
+    var placeEl = document.getElementById('report-placement');
+
+    if (rooftop) {
+      if (suitEl)  suitEl.textContent  = rooftop.suitability_score != null ? rooftop.suitability_score + '/100' : '—';
+      if (capEl)   capEl.textContent   = rooftop.recommended_capacity_kw != null ? rooftop.recommended_capacity_kw + ' kW' : '—';
+      if (placeEl) placeEl.textContent = rooftop.shade_risk ? rooftop.shade_risk + ' shade' : '—';
+    }
+    if (prediction) {
+      var kwh = Number(prediction.annual_projection);
+      if (genEl) genEl.textContent = Number.isFinite(kwh) ? kwh.toLocaleString('en-IN') + ' kWh' : '—';
+      if (capEl && !rooftop) capEl.textContent = prediction.recommended_capacity != null ? prediction.recommended_capacity + ' kW' : '—';
+    }
+  }
+
+  function populateReportModal() {
+    var prediction = null, rooftop = null, roi = null;
+    try { prediction = JSON.parse(localStorage.getItem('solarPrediction')); } catch(e) {}
+    try { rooftop   = JSON.parse(localStorage.getItem('rooftopAnalysis'));  } catch(e) {}
+    try { roi       = JSON.parse(localStorage.getItem('solarROI'));         } catch(e) {}
+
+    var dateEl = document.getElementById('modal-date');
+    if (dateEl) dateEl.textContent = new Date().toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'});
+
+    if (rooftop) {
+      var s = document.getElementById('modal-suitability');
+      if (s) s.textContent = rooftop.suitability_score != null ? rooftop.suitability_score + '/100' : '—';
+      var r = document.getElementById('modal-roof-area');
+      if (r) r.textContent = rooftop.roof_area_m2 != null ? rooftop.roof_area_m2 + ' m²' : '—';
+      var u = document.getElementById('modal-usable-area');
+      if (u) u.textContent = rooftop.usable_area_m2 != null ? rooftop.usable_area_m2 + ' m²' : '—';
+      var sh = document.getElementById('modal-shade');
+      if (sh) sh.textContent = rooftop.shade_risk || '—';
+      var c = document.getElementById('modal-capacity');
+      if (c) c.textContent = rooftop.recommended_capacity_kw != null ? rooftop.recommended_capacity_kw + ' kW' : '—';
+    }
+    if (prediction) {
+      var kwh = Number(prediction.annual_projection);
+      var annEl = document.getElementById('modal-annual');
+      if (annEl) annEl.textContent = Number.isFinite(kwh) ? (kwh / 1000).toFixed(1) + ' MWh/year' : '—';
+      var co2El = document.getElementById('modal-co2');
+      if (co2El) co2El.textContent = Number.isFinite(kwh) ? ((kwh / 1000) * 1.04).toFixed(1) + ' tons/year' : '—';
+      if (!rooftop) {
+        var c2 = document.getElementById('modal-capacity');
+        if (c2) c2.textContent = prediction.recommended_capacity != null ? prediction.recommended_capacity + ' kW' : '—';
+      }
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initHeaderScroll();
     initChartBars();
@@ -633,6 +691,9 @@
     initAnalysis();
     initAuthForms();
     initUserProfile();
+    populateReportSummary();
+    var viewReportBtn = document.getElementById('view-report-btn');
+    if (viewReportBtn) viewReportBtn.addEventListener('click', populateReportModal);
   });
 })();
 
@@ -657,10 +718,13 @@ var CITY_COORDS = {
 };
 
 function initSolarPrediction() {
-  // initSolarPrediction is outside the main IIFE, so it cannot access the
-  // IIFE-scoped API_BASE_URL. Define the same URL here using the same strategy.
-  var API_BASE_URL = window.HELIOSENSE_API_URL ||
-    (window.location.port === '5500' ? 'http://localhost:5000' : '');
+  var _host = window.location.hostname;
+  var API_BASE_URL =
+    (_host === "127.0.0.1" || _host === "localhost")
+      ? "http://127.0.0.1:5000"
+      : "https://heliosense-ai-1.onrender.com";
+  console.log('[prediction] API_BASE_URL:', API_BASE_URL);
+  console.log('[prediction] hostname:', _host);
 
   // Get DOM elements
   const manualLocationBtn = document.getElementById("manualLocationBtn");
@@ -692,7 +756,7 @@ function initSolarPrediction() {
     }
 
     if (storedPrediction && typeof storedPrediction === "object") {
-      console.log("Stored solar prediction loaded:", storedPrediction);
+      console.log('[prediction] loading cached result from localStorage — these are NOT from the current request', storedPrediction);
       try {
         updateDashboardCards(storedPrediction);
       } catch (error) {
@@ -826,10 +890,12 @@ function initSolarPrediction() {
       predictBtn.innerHTML = '<span style="margin-right:8px;">⏳</span>Analyzing...';
 
       try {
+        console.log('[prediction] request started');
         console.log('[prediction] Starting for city:', city, 'gpsCoords:', gpsCoords);
 
         var latitude, longitude, temperature, humidity, wind_speed, cloud_cover_pct = null;
         var usingFallback = false;
+        var predictionReceived = false;
 
         // ── Step 1: Fetch live weather ──────────────────────────────────────
         var weatherUrl = gpsCoords
@@ -894,22 +960,42 @@ function initSolarPrediction() {
 
         // ── Step 2: POST to /predict-solar ──────────────────────────────────
         var payload = { latitude: latitude, longitude: longitude, temperature: temperature, humidity: humidity, wind_speed: wind_speed, cloud_cover_pct: cloud_cover_pct };
+        var predictionUrl = API_BASE_URL + '/predict-solar';
+        console.log('[prediction] request URL:', predictionUrl);
         console.log('[prediction] POST /predict-solar payload:', payload);
 
         var predictionResp;
         try {
-          predictionResp = await fetch(API_BASE_URL + '/predict-solar', {
+          predictionResp = await fetch(predictionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
         } catch (networkErr) {
-          console.error('[prediction] Network error reaching /predict-solar:', networkErr);
-          showToast('Cannot reach prediction service. Check your connection.', 5000);
+          console.log('[prediction] failed', networkErr);
+          console.error('[prediction] request URL:', predictionUrl);
+          console.error('[prediction] error name:', networkErr.name);
+          console.error('[prediction] error message:', networkErr.message);
+          // TypeError: "Failed to fetch" (Chrome) or "NetworkError..." (Firefox)
+          // almost always means CORS rejection or the server is unreachable.
+          if (networkErr instanceof TypeError) {
+            console.error(
+              '[prediction] CORS or network failure. Checklist:\n' +
+              '  1. Is Flask running at ' + API_BASE_URL + '?\n' +
+              '  2. Does Flask have flask-cors configured for this origin?\n' +
+              '  3. Is the hostname detection correct? (current: ' + window.location.hostname + ')'
+            );
+          }
+          // Only show this toast if the current request failed — never fires after a
+          // successful predictionReceived=true path because the return below exits first.
+          if (!predictionReceived) {
+            showToast('Cannot reach prediction service. Check your connection.', 5000);
+          }
           return;
         }
 
         console.log('[prediction] /predict-solar status:', predictionResp.status);
+        console.log('[prediction] response URL:', predictionResp.url);
 
         if (!predictionResp.ok) {
           var errData = {};
@@ -946,6 +1032,8 @@ function initSolarPrediction() {
         }
 
         // ── Step 3: Update all dashboard cards and persist ──────────────────
+        predictionReceived = true;
+        console.log('[prediction] success', result);
         updateDashboardCards(result);
         try { localStorage.setItem('solarPrediction', JSON.stringify(result)); } catch (e) { console.warn('Could not save prediction', e); }
         showToast('Prediction complete for ' + city + '.');

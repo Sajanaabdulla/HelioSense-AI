@@ -57,6 +57,25 @@ YOLO_OVERLAP_THRESHOLD = 0.20   # min fraction of a YOLO box area that must
 # ── Scene scale ───────────────────────────────────────────────────────────────
 SCENE_M2 = 900.0   # assumed 30 m × 30 m for a close-overhead drone / satellite view
 
+# ── Perspective validation thresholds ─────────────────────────────────────────
+# Sky colour fraction of the whole image.  Satellite/aerial images contain no
+# visible sky.  Side-view / street-level photos typically show 25–70% sky.
+SKY_RATIO_MAX          = 0.15   # sky > 15% of image area → side-view
+
+# Minimum fraction of image that the detected roof contour must cover.
+# True overhead imagery centres the rooftop; oblique / street shots show it
+# as a small tilted sliver.
+MIN_ROOF_RATIO_VIEW    = 0.20   # roof coverage < 20% → not satellite/aerial
+
+# Horizon-line combo check: a clear horizontal edge band in the upper image half
+# combined with even modest sky presence is a strong side-view signal.
+HORIZON_LINE_MIN_COUNT = 3      # near-horizontal Hough lines in upper 40%
+HORIZON_SKY_COMBO_THR  = 0.06   # secondary sky threshold for the combo rule
+
+PERSPECTIVE_REJECT_MSG = (
+    'Please upload a top-view satellite or aerial rooftop image for accurate solar analysis.'
+)
+
 _yolo_model     = None
 _yolo_attempted = False
 _yolo_lock      = threading.Lock()
@@ -560,6 +579,95 @@ def _compute_metrics(mask, h, w, obs_boxes, yolo_available, contour_area_px,
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Perspective validation helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_sky_ratio(bgr, h, w):
+    """Return fraction of image pixels that appear to be sky.
+
+    Detects clear blue sky and light/hazy sky using HSV colour ranges.
+    Deliberately avoids a broad 'white sky' category to prevent false positives
+    on pale concrete or light-metal rooftops.
+    """
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    H, S, V = hsv[:, :, 0], hsv[:, :, 1], hsv[:, :, 2]
+
+    # Clear blue sky (hue 95–125 out of 180, well-saturated, bright)
+    blue_sky  = (H >= 95) & (H <= 125) & (S > 40) & (V > 100)
+
+    # Hazy / light blue sky (low saturation but still distinctly sky-tinted)
+    light_sky = (H >= 90) & (H <= 130) & (S > 12) & (S <= 40) & (V > 165)
+
+    sky_px = int(np.sum(blue_sky | light_sky))
+    return sky_px / (h * w)
+
+
+def _detect_horizon_lines(bgr, h, w):
+    """Count strong near-horizontal edge segments in the upper 40% of the image.
+
+    A horizon (sky-to-building boundary) produces a concentrated horizontal
+    edge band near the top of street-level photographs.  Top-view aerial images
+    lack this structural pattern.
+
+    Returns the number of qualifying near-horizontal line segments.
+    """
+    roi  = bgr[:int(h * 0.40), :]
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+
+    lines = cv2.HoughLinesP(
+        edges, rho=1, theta=np.pi / 180, threshold=40,
+        minLineLength=int(w * 0.15), maxLineGap=20,
+    )
+
+    count = 0
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            dx = abs(x2 - x1)
+            if dx == 0:
+                continue
+            angle_deg = abs(np.degrees(np.arctan2(abs(y2 - y1), dx)))
+            if angle_deg < 15:   # near-horizontal = potential horizon line
+                count += 1
+    return count
+
+
+def _validate_perspective(bgr, h, w, roof_coverage, sky_ratio):
+    """Full perspective classification after contour detection.
+
+    Parameters
+    ----------
+    bgr           : uint8 BGR image
+    h, w          : image dimensions
+    roof_coverage : fraction of image pixels covered by the detected roof mask
+    sky_ratio     : pre-computed sky fraction (from _compute_sky_ratio)
+
+    Returns
+    -------
+    dict with keys: accepted (bool), sky_ratio, roof_ratio, horizon_lines,
+    perspective ('top_view' | 'side_view').
+    """
+    horizon_lines = _detect_horizon_lines(bgr, h, w)
+
+    is_side_view = False
+    if sky_ratio > SKY_RATIO_MAX:
+        is_side_view = True
+    elif roof_coverage < MIN_ROOF_RATIO_VIEW:
+        is_side_view = True
+    elif horizon_lines >= HORIZON_LINE_MIN_COUNT and sky_ratio > HORIZON_SKY_COMBO_THR:
+        is_side_view = True
+
+    return {
+        'accepted':      not is_side_view,
+        'sky_ratio':     round(sky_ratio, 4),
+        'roof_ratio':    round(roof_coverage, 4),
+        'horizon_lines': horizon_lines,
+        'perspective':   'side_view' if is_side_view else 'top_view',
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Public entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -605,6 +713,18 @@ def analyze_rooftop(file_storage):
     h, w = bgr.shape[:2]
     logger.info('[rooftop] received image %dx%d px', w, h)
 
+    # ── Perspective pre-screen: sky colour check (fast — runs before YOLO) ────
+    # Satellite and drone top-view images contain essentially no sky pixels.
+    # Side-view / street-level photos typically show 25–70% sky.  Rejecting
+    # here avoids wasting YOLO inference on obviously invalid inputs.
+    sky_ratio = _compute_sky_ratio(bgr, h, w)
+    if sky_ratio > SKY_RATIO_MAX:
+        logger.info('[validation] sky_ratio=%.4f', sky_ratio)
+        logger.info('[validation] roof_ratio=N/A')
+        logger.info('[validation] perspective=side_view')
+        logger.info('[validation] rejected')
+        return {'success': False, 'error': PERSPECTIVE_REJECT_MSG, 'confidence': 0}
+
     # ── Gate 1 & YOLO: run both in parallel (YOLO first so its result informs
     #    threshold tightening but does not block the geometry checks) ──────────
     all_boxes, all_confs, yolo_available = _detect_obstructions_yolo(bgr)
@@ -631,6 +751,18 @@ def analyze_rooftop(file_storage):
             ),
             'confidence': 0,
         }
+
+    # ── Perspective gate: roof coverage ratio + horizon line check ─────────────
+    # Full classification now that we know the roof mask coverage fraction.
+    # Reuses the sky_ratio already computed in the pre-screen above.
+    persp = _validate_perspective(bgr, h, w, coverage, sky_ratio)
+    logger.info('[validation] sky_ratio=%.4f', persp['sky_ratio'])
+    logger.info('[validation] roof_ratio=%.4f', persp['roof_ratio'])
+    logger.info('[validation] perspective=%s', persp['perspective'])
+    if not persp['accepted']:
+        logger.info('[validation] rejected')
+        return {'success': False, 'error': PERSPECTIVE_REJECT_MSG, 'confidence': 0}
+    logger.info('[validation] accepted')
 
     # ── Gate 2: coverage bounds ───────────────────────────────────────────────
     # Tighten the lower bound when YOLO is unavailable — without AI validation

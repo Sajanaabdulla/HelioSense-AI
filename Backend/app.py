@@ -288,14 +288,30 @@ def predict_solar():
             "confidence":           result.get("confidence"),
         })
 
+        # ── Pre-serialisation safety check ───────────────────────────────────
+        # jsonify() in Flask 3.x can raise AFTER committing the 200 status line
+        # if any value is non-serialisable (numpy scalar, NaN, Inf, etc.).
+        # Verify here first so any failure returns a proper 500 with a body.
+        import json as _json
+        try:
+            _body_str = _json.dumps(result)
+            print("[predict-solar] returning: JSON OK, byte count:", len(_body_str))
+            print("[predict-solar] returning:", result)
+        except (TypeError, ValueError) as _json_err:
+            print("[predict-solar] JSON SERIALISATION FAILED:", type(_json_err).__name__, str(_json_err))
+            print("[predict-solar] type map:", {k: type(v).__name__ for k, v in result.items()})
+            # Surface as a proper 500 with a body so the browser never gets an empty 200
+            return jsonify({"error": "Internal serialisation error", "detail": str(_json_err)}), 500
+
         return jsonify(result)
 
     except FileNotFoundError as e:
-        print("[predict] ERROR: Model file not found:", str(e))
+        print("[predict-solar] returning: FileNotFoundError —", str(e))
         return jsonify({"error": str(e), "hint": "Run train_model.py first"}), 503
 
     except Exception as e:
         import traceback
+        print("[predict-solar] returning: unhandled exception —", type(e).__name__, str(e))
         print("[predict] UNHANDLED EXCEPTION:")
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500

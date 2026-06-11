@@ -21,11 +21,10 @@
     var heatmapThumb  = document.getElementById('heatmap-thumb');
     var heatmapModal  = document.getElementById('heatmap-modal');
     var heatmapMImg   = document.getElementById('heatmap-modal-img');
-    // When opened via VS Code Live Server (port 5500) rather than Flask (port 5000),
-    // relative URLs resolve to the Live Server — which cannot handle POST requests.
-    // Explicitly target the Flask backend in that case.
-    var API_BASE = window.HELIOSENSE_API_URL ||
-      (window.location.port === '5500' ? 'http://localhost:5000' : '');
+    var API_BASE =
+      (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost")
+        ? "http://127.0.0.1:5000"
+        : "https://heliosense-ai-1.onrender.com";
     console.log('[HelioSense] Rooftop analysis — API base:', API_BASE || '(relative — served by Flask)');
     var toast = window.showToast || function (msg, t) {
       try {
