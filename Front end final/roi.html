@@ -89,25 +89,25 @@ Home
 			<!-- KPI row -->
 <section class="roi-stats-grid" style="margin-bottom:16px;">
 
-    <div class="card glass-card roi-stat-card">
+    <div class="card glass-card roi-stat-card kpi-roi-install">
         <div class="value-label">Installation Cost</div>
         <div id="installationCost" class="value-large roi-value-animate" style="margin-top:12px;">₹0</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Includes panels & installation</div>
     </div>
 
-    <div class="card glass-card roi-stat-card roi-highlight-savings">
+    <div class="card glass-card roi-stat-card kpi-roi-savings">
         <div class="value-label">Annual Savings</div>
-        <div id="annualSavings" class="value-large roi-value-animate" style="margin-top:12px;color:#10b981;">₹0</div>
+        <div id="annualSavings" class="value-large roi-value-animate" style="margin-top:12px;color:#059669;">₹0</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected savings based on output</div>
     </div>
 
-    <div class="card glass-card roi-stat-card roi-highlight-roi">
+    <div class="card glass-card roi-stat-card kpi-roi-percent">
         <div class="value-label">ROI Percentage</div>
-        <div id="roiPercentage" class="value-large roi-value-animate" style="margin-top:12px;color:#10b981;">0%</div>
+        <div id="roiPercentage" class="value-large roi-value-animate" style="margin-top:12px;color:#059669;">0%</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Strong return with current assumptions</div>
     </div>
 
-    <div class="card glass-card roi-stat-card">
+    <div class="card glass-card roi-stat-card kpi-roi-payback">
         <div class="value-label">Payback Period</div>
         <div id="paybackPeriod" class="value-large roi-value-animate" style="margin-top:12px;">0 yrs</div>
         <div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Time to recover initial investment</div>
@@ -117,17 +117,17 @@ Home
 
 			<!-- Highlight cards -->
 			<section class="roi-highlight-grid" style="margin-bottom:16px;">
-				<div class="card glass-card roi-highlight-card">
+				<div class="card glass-card roi-highlight-card kpi-breakeven">
 					<div class="value-label">Break-even Date</div>
 					<div id="breakEvenDate" class="value-large roi-value-animate" style="margin-top:12px;">March 2031</div>
 					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Projected date when investment is recovered</div>
 				</div>
-				<div class="card glass-card roi-highlight-card">
+				<div class="card glass-card roi-highlight-card kpi-lifetime">
 					<div class="value-label">Lifetime Savings</div>
 					<div id="lifetimeSavings" class="value-large roi-value-animate" style="margin-top:12px;">₹4,50,000</div>
 					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Total savings over the system lifecycle</div>
 				</div>
-				<div class="card glass-card roi-highlight-card">
+				<div class="card glass-card roi-highlight-card kpi-co2">
 					<div class="value-label">CO₂ Reduction</div>
 					<div id="carbonReduction" class="value-large roi-value-animate" style="margin-top:12px;color:#059669;">9.4 tons/year</div>
 					<div style="margin-top:10px;color:#9CA3AF;font-size:13px;">Annual environmental impact reduction</div>
@@ -178,7 +178,7 @@ Home
 						</div>
 						<div>
 							<div class="value-label">Investment Type</div>
-							<select style="width:100%;padding:14px 16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;color:#ECEFF4;margin-top:10px;">
+							<select style="width:100%;padding:14px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:16px;color:#0F172A;margin-top:10px;">
 								<option>Direct Purchase</option>
 								<option>PPA Financing</option>
 								<option>Solar Lease</option>
@@ -218,12 +218,6 @@ Home
 			</div>
 		</div>
 </main>
-
-<footer class="app-footer">
-<div class="footer-inner" style="justify-content:center">
-<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
-</div>
-</footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>

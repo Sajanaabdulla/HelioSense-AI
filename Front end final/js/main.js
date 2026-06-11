@@ -248,7 +248,8 @@
 
   const CHAT_HISTORY_KEY = 'heliaChatHistory';
   const HELIA_USER_KEY = 'heliaUser';
-  const API_BASE_URL = window.HELIOSENSE_API_URL || '';
+  const API_BASE_URL = window.HELIOSENSE_API_URL ||
+    (window.location.port === '5500' ? 'http://localhost:5000' : '');
   const CHAT_ENDPOINT = `${API_BASE_URL}/chat-query`;
 
   function logDebug(label, value) {
@@ -273,11 +274,33 @@
     }
   }
 
+  function simpleMarkdown(text) {
+    var escaped = text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    var lines = escaped.split('\n');
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      // Bold **text**
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Italic *text*
+      line = line.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      // Headers ## or ###
+      line = line.replace(/^#{2,3}\s+(.+)$/, '<strong>$1</strong>');
+      // Bullet lines starting with -, *, or •
+      if (/^[-*•]\s+/.test(line.trim())) {
+        line = '<span class="helia-bullet">•</span>' + line.replace(/^[-*•]\s+/, '');
+      }
+      out.push(line);
+    }
+    return out.filter(function (l) { return l.trim() !== ''; }).join('<br>');
+  }
+
   function appendMessage(messages, message) {
     const div = document.createElement('div');
     div.className = 'chat-msg chat-msg--' + message.speaker;
     if (message.speaker === 'ai') {
-      div.innerHTML = '<span class="chat-msg__label">Helia AI</span>' + message.text;
+      div.innerHTML = '<span class="chat-msg__label">Helia AI</span>' + simpleMarkdown(message.text);
     } else {
       div.textContent = message.text;
     }
@@ -409,30 +432,68 @@
   async function queryHelia(question) {
     try {
       var prediction = null;
+      var rooftop = null;
       var roi = null;
       try {
         prediction = JSON.parse(localStorage.getItem('solarPrediction') || 'null');
-        roi = JSON.parse(localStorage.getItem('solarROI') || 'null');
+        rooftop   = JSON.parse(localStorage.getItem('rooftopAnalysis') || 'null');
+        roi       = JSON.parse(localStorage.getItem('solarROI') || 'null');
       } catch (parseErr) {
         console.warn('Unable to parse stored data:', parseErr);
       }
       logDebug('User Message:', question);
       logDebug('Prediction Data:', prediction);
+      logDebug('Rooftop Data:', rooftop);
       logDebug('ROI Data:', roi);
 
       if (!CHAT_ENDPOINT) {
-        console.warn('Chat endpoint not configured; using demo response');
+        console.warn('[helia] Chat endpoint not configured; using demo response');
         return getDemoResponse(question);
       }
 
-      var response = await fetch(CHAT_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: question, prediction: prediction, roi: roi })
+      // Send last 8 turns (skip welcome, keep alternating user/ai pairs)
+      var historyForBackend = [];
+      try {
+        var stored = loadChatHistory();
+        historyForBackend = stored
+          .filter(function (m) { return m.speaker && m.text; })
+          .slice(-8)
+          .map(function (m) { return { role: m.speaker === 'user' ? 'user' : 'model', text: m.text }; });
+      } catch (e) {}
+
+      var requestBody = {
+        question:   question,
+        prediction: prediction,
+        rooftop:    rooftop,
+        roi:        roi,
+        history:    historyForBackend,
+      };
+      console.log('[helia] POST', CHAT_ENDPOINT, {
+        question:    question,
+        hasPrediction: !!prediction,
+        hasRooftop:    !!rooftop,
+        hasROI:        !!roi,
+        historyLen:    historyForBackend.length,
       });
 
+      var response;
+      try {
+        response = await fetch(CHAT_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+      } catch (fetchErr) {
+        console.error('[helia] NETWORK ERROR (fetch failed):', fetchErr);
+        return getDemoResponse(question);
+      }
+
+      console.log('[helia] Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        console.error('Chat API error:', response.status, response.statusText);
+        var errText = '';
+        try { errText = await response.text(); } catch (e) {}
+        console.error('[helia] Non-OK response body:', errText.slice(0, 500));
         return getDemoResponse(question);
       }
 
@@ -440,17 +501,22 @@
       try {
         payload = await response.json();
       } catch (jsonErr) {
-        console.error('Failed to parse chat response:', jsonErr);
+        console.error('[helia] Failed to parse JSON response:', jsonErr);
         return getDemoResponse(question);
       }
 
-      logDebug('Retrieved Chunks:', payload.chunks || []);
+      console.log('[helia] Payload received:', {
+        hasAnswer: !!(payload && payload.answer),
+        answerLen: payload && payload.answer ? payload.answer.length : 0,
+        chunks:    (payload && payload.chunks || []).length,
+        error:     payload && payload.error,
+      });
 
       if (payload && payload.answer && typeof payload.answer === 'string' && payload.answer.trim()) {
         return payload.answer;
       }
 
-      console.warn('No valid answer in payload, using demo');
+      console.warn('[helia] No valid answer field in payload — full payload:', payload);
       return getDemoResponse(question);
     } catch (err) {
       console.error('Chat query error:', err);
@@ -473,7 +539,9 @@
   function getTypingIndicator() {
     const typing = document.createElement('div');
     typing.className = 'chat-msg chat-msg--ai chat-msg--typing';
-    typing.innerHTML = '<span class="chat-msg__label">Helia AI</span>Helia is typing...';
+    typing.innerHTML =
+      '<span class="chat-msg__label">Helia AI</span>' +
+      '<span class="typing-dots"><span></span><span></span><span></span></span>';
     return typing;
   }
 
@@ -574,7 +642,26 @@
 
 const WEATHER_API_KEY = "6c14532b577693c9411d57cc80e66422";
 
+// Fallback city coordinates used when the weather API is unavailable
+var CITY_COORDS = {
+  'Kochi':              { lat: 9.94,  lon: 76.26 },
+  'Kollam':             { lat: 8.88,  lon: 76.60 },
+  'Thiruvananthapuram': { lat: 8.52,  lon: 76.94 },
+  'Kozhikode':          { lat: 11.25, lon: 75.78 },
+  'Mumbai':             { lat: 19.08, lon: 72.88 },
+  'Delhi':              { lat: 28.64, lon: 77.22 },
+  'Bangalore':          { lat: 12.97, lon: 77.59 },
+  'Chennai':            { lat: 13.08, lon: 80.27 },
+  'Hyderabad':          { lat: 17.39, lon: 78.48 },
+  'default':            { lat: 12.97, lon: 77.59 }
+};
+
 function initSolarPrediction() {
+  // initSolarPrediction is outside the main IIFE, so it cannot access the
+  // IIFE-scoped API_BASE_URL. Define the same URL here using the same strategy.
+  var API_BASE_URL = window.HELIOSENSE_API_URL ||
+    (window.location.port === '5500' ? 'http://localhost:5000' : '');
+
   // Get DOM elements
   const manualLocationBtn = document.getElementById("manualLocationBtn");
   const locationBtn = document.getElementById("locationBtn");
@@ -707,33 +794,24 @@ function initSolarPrediction() {
   // ─────────────────────────────────────────────────────────────────────────
   // City Input Change — Show selected location when user picks from list
   // ─────────────────────────────────────────────────────────────────────────
-  if (cityInput) {
-    cityInput.addEventListener("change", function() {
-      const city = cityInput.value.trim();
-      gpsCoords = null;
-      if (city) {
-        if (selectedCityName) selectedCityName.textContent = city;
-        if (selectedLocation) selectedLocation.style.display = "block";
-        if (predictBtn) predictBtn.style.display = "inline-flex";
-      }
-    });
+  function _applyCity(city) {
+    if (!city) return;
+    gpsCoords = null;
+    if (selectedCityName) selectedCityName.textContent = city;
+    if (selectedLocation) selectedLocation.style.display = 'block';
+    if (predictBtn) predictBtn.style.display = 'inline-flex';
+  }
 
-    // Also trigger on Enter key
-    cityInput.addEventListener("keypress", function(e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const city = cityInput.value.trim();
-        if (city) {
-          if (selectedCityName) selectedCityName.textContent = city;
-          if (selectedLocation) selectedLocation.style.display = "block";
-          if (predictBtn) predictBtn.style.display = "inline-flex";
-        }
-      }
+  if (cityInput) {
+    cityInput.addEventListener('input', function () { _applyCity(cityInput.value.trim()); });
+    cityInput.addEventListener('change', function () { _applyCity(cityInput.value.trim()); });
+    cityInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); _applyCity(cityInput.value.trim()); }
     });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // BUTTON 3: "Analyze Solar Potential" — real backend, no demo fallback
+  // BUTTON 3: "Analyze Solar Potential"
   // ─────────────────────────────────────────────────────────────────────────
   if (predictBtn) {
     predictBtn.addEventListener('click', async function () {
@@ -748,75 +826,133 @@ function initSolarPrediction() {
       predictBtn.innerHTML = '<span style="margin-right:8px;">⏳</span>Analyzing...';
 
       try {
-        // Step 1: Fetch live weather for the selected location.
-        // GPS mode uses coordinates; manual mode uses city name.
+        console.log('[prediction] Starting for city:', city, 'gpsCoords:', gpsCoords);
+
+        var latitude, longitude, temperature, humidity, wind_speed, cloud_cover_pct = null;
+        var usingFallback = false;
+
+        // ── Step 1: Fetch live weather ──────────────────────────────────────
         var weatherUrl = gpsCoords
-          ? `https://api.openweathermap.org/data/2.5/weather?lat=${gpsCoords.lat}&lon=${gpsCoords.lon}&appid=${WEATHER_API_KEY}&units=metric`
-          : `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${WEATHER_API_KEY}&units=metric`;
+          ? 'https://api.openweathermap.org/data/2.5/weather?lat=' + gpsCoords.lat + '&lon=' + gpsCoords.lon + '&appid=' + WEATHER_API_KEY + '&units=metric'
+          : 'https://api.openweathermap.org/data/2.5/weather?q=' + encodeURIComponent(city) + '&appid=' + WEATHER_API_KEY + '&units=metric';
 
-        var weatherResponse;
+        console.log('[prediction] Weather URL:', weatherUrl.replace(WEATHER_API_KEY, 'KEY_REDACTED'));
+
         try {
-          weatherResponse = await fetch(weatherUrl, { cache: 'no-store' });
+          var weatherResponse = await fetch(weatherUrl, { cache: 'no-store' });
+          console.log('[prediction] Weather status:', weatherResponse.status);
+
+          if (weatherResponse.status === 404) {
+            showToast('Location "' + city + '" not found. Try a different city name.', 5000);
+            return;
+          }
+
+          if (!weatherResponse.ok) {
+            console.warn('[prediction] Weather API returned', weatherResponse.status, '— switching to coordinate fallback');
+            usingFallback = true;
+          } else {
+            var weatherData = await weatherResponse.json();
+            console.log('[prediction] Weather data:', {
+              city: weatherData.name,
+              lat: weatherData.coord && weatherData.coord.lat,
+              lon: weatherData.coord && weatherData.coord.lon,
+              temp: weatherData.main && weatherData.main.temp,
+              humidity: weatherData.main && weatherData.main.humidity,
+              wind: weatherData.wind && weatherData.wind.speed,
+              clouds: weatherData.clouds && weatherData.clouds.all
+            });
+            latitude      = gpsCoords ? gpsCoords.lat : weatherData.coord.lat;
+            longitude     = gpsCoords ? gpsCoords.lon : weatherData.coord.lon;
+            temperature   = weatherData.main.temp;
+            humidity      = weatherData.main.humidity;
+            wind_speed    = (weatherData.wind && weatherData.wind.speed) || 0;
+            cloud_cover_pct = (weatherData.clouds && weatherData.clouds.all != null)
+              ? weatherData.clouds.all : null;
+          }
         } catch (networkErr) {
-          console.error('Weather fetch network error:', networkErr);
-          showToast('Network error — could not reach weather service. Check your connection.', 5000);
-          return;
+          console.warn('[prediction] Weather API network error:', networkErr, '— switching to fallback');
+          usingFallback = true;
         }
 
-        if (!weatherResponse.ok) {
-          var errMsg = weatherResponse.status === 404
-            ? `Location "${city}" not found. Try a different city name.`
-            : `Weather service error (${weatherResponse.status}). Please try again.`;
-          showToast(errMsg, 5000);
-          return;
+        // ── Weather fallback: use known city coordinates + typical weather ──
+        if (usingFallback) {
+          var fallbackCoords = gpsCoords
+            || CITY_COORDS[city]
+            || CITY_COORDS[Object.keys(CITY_COORDS).find(function (k) {
+                 return k.toLowerCase() === city.toLowerCase();
+               })]
+            || CITY_COORDS['default'];
+          latitude    = fallbackCoords.lat;
+          longitude   = fallbackCoords.lon;
+          temperature = 28;
+          humidity    = 70;
+          wind_speed  = 3;
+          cloud_cover_pct = null;
+          console.log('[prediction] Fallback coords used:', { latitude, longitude });
+          showToast('Live weather unavailable — using estimated conditions.', 3000);
         }
 
-        var weatherData = await weatherResponse.json();
-        console.log('Weather data fetched:', weatherData);
-
-        // Step 2: POST all parameters to the real /predict-solar backend.
-        var latitude  = gpsCoords ? gpsCoords.lat : weatherData.coord.lat;
-        var longitude = gpsCoords ? gpsCoords.lon : weatherData.coord.lon;
-        var temperature = weatherData.main.temp;
-        var humidity    = weatherData.main.humidity;
-        var wind_speed  = (weatherData.wind && weatherData.wind.speed) || 0;
+        // ── Step 2: POST to /predict-solar ──────────────────────────────────
+        var payload = { latitude: latitude, longitude: longitude, temperature: temperature, humidity: humidity, wind_speed: wind_speed, cloud_cover_pct: cloud_cover_pct };
+        console.log('[prediction] POST /predict-solar payload:', payload);
 
         var predictionResp;
         try {
-          predictionResp = await fetch(`${API_BASE_URL}/predict-solar`, {
+          predictionResp = await fetch(API_BASE_URL + '/predict-solar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ latitude, longitude, temperature, humidity, wind_speed })
+            body: JSON.stringify(payload)
           });
         } catch (networkErr) {
-          console.error('Prediction fetch network error:', networkErr);
-          showToast('Network error — could not reach prediction service. Check your connection.', 5000);
+          console.error('[prediction] Network error reaching /predict-solar:', networkErr);
+          showToast('Cannot reach prediction service. Check your connection.', 5000);
           return;
         }
+
+        console.log('[prediction] /predict-solar status:', predictionResp.status);
 
         if (!predictionResp.ok) {
           var errData = {};
           try { errData = await predictionResp.json(); } catch (e) {}
+          console.error('[prediction] Prediction API error:', predictionResp.status, errData);
           var hint = errData.hint ? ' ' + errData.hint : '';
-          showToast((errData.error || `Prediction failed (${predictionResp.status}).`) + hint, 5000);
+          showToast((errData.error || 'Prediction failed (' + predictionResp.status + ').') + hint, 6000);
           return;
         }
 
-        var result = await predictionResp.json();
+        var result;
+        try {
+          result = await predictionResp.json();
+        } catch (parseErr) {
+          console.error('[prediction] Failed to parse prediction response:', parseErr);
+          showToast('Invalid response from prediction service.', 5000);
+          return;
+        }
+
+        console.log('[prediction] Result received:', {
+          potential_score:      result.potential_score,
+          peak_sun_hours:       result.peak_sun_hours,
+          recommended_capacity: result.recommended_capacity,
+          panel_count:          result.panel_count,
+          annual_projection:    result.annual_projection,
+          energy_coverage:      result.energy_coverage,
+          suitability:          result.suitability,
+          confidence:           result.confidence
+        });
 
         if (result.error) {
           showToast(result.error, 5000);
           return;
         }
 
-        // Step 3: Update all dashboard cards and persist the result.
+        // ── Step 3: Update all dashboard cards and persist ──────────────────
         updateDashboardCards(result);
         try { localStorage.setItem('solarPrediction', JSON.stringify(result)); } catch (e) { console.warn('Could not save prediction', e); }
-        showToast('Prediction generated successfully.');
+        showToast('Prediction complete for ' + city + '.');
 
       } catch (err) {
-        console.error('Unexpected prediction error:', err);
-        showToast('An unexpected error occurred. Please try again.', 5000);
+        console.error('[prediction] Unexpected error:', err.message, err.stack);
+        showToast('Unexpected error: ' + err.message, 5000);
       } finally {
         predictBtn.disabled = false;
         predictBtn.innerHTML = originalHTML;
@@ -936,13 +1072,69 @@ function updateDashboardCards(result) {
     });
   }
 
-  const user = getSavedUser();
-  if (user && user.name) {
-    const userNameDisplay = document.getElementById('userNameDisplay');
-    if (userNameDisplay) {
-      userNameDisplay.textContent = user.name;
-    }
+  // Show action buttons once results are populated
+  var actionsPanel = document.getElementById('predictionActions');
+  if (actionsPanel) actionsPanel.style.display = 'flex';
+
+  // Wire up Download button
+  var dlBtn = document.getElementById('downloadPredictionBtn');
+  if (dlBtn && !dlBtn._wired) {
+    dlBtn._wired = true;
+    dlBtn.addEventListener('click', function () {
+      try {
+        var stored = localStorage.getItem('solarPrediction');
+        if (!stored) { window.showToast && showToast('No prediction data to download.', 3000); return; }
+        var parsed = JSON.parse(stored);
+        var lines = [
+          'HelioSense AI — Solar Prediction Report',
+          '========================================',
+          'Generated: ' + new Date().toLocaleString('en-IN'),
+          '',
+          'Potential Score:       ' + (parsed.potential_score || '—'),
+          'Peak Sun Hours:        ' + (parsed.peak_sun_hours || '—') + ' hrs/day',
+          'Recommended Capacity:  ' + (parsed.recommended_capacity || '—') + ' kW',
+          'Panel Count:           ' + (parsed.panel_count || '—') + ' Panels',
+          'Annual Generation:     ' + (parsed.annual_projection || '—') + ' kWh/year',
+          'Energy Coverage:       ' + (parsed.energy_coverage || '—') + '%',
+          'Suitability:           ' + (parsed.suitability || '—'),
+          'Confidence:            ' + (parsed.confidence || '—') + '/100',
+          '',
+          'Location: lat=' + (parsed.inputs && parsed.inputs.latitude || '—') + ', lon=' + (parsed.inputs && parsed.inputs.longitude || '—'),
+        ];
+        var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'heliosense-prediction.txt';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (e) { console.error('Download failed', e); }
+    });
   }
 
-  console.log("All prediction data:", result);
+  // Wire up Reset button
+  var resetBtn = document.getElementById('resetPredictionBtn');
+  if (resetBtn && !resetBtn._wired) {
+    resetBtn._wired = true;
+    resetBtn.addEventListener('click', function () {
+      localStorage.removeItem('solarPrediction');
+      var ids = ['potentialScore', 'peakSunHours', 'solarCapacity', 'panelCount',
+                 'energyCoverage', 'estimatedSavings', 'co2Reduction', 'annualProjection'];
+      ids.forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = '—';
+      });
+      if (actionsPanel) actionsPanel.style.display = 'none';
+      window.showToast && showToast('Prediction cleared.');
+    });
+  }
+
+  try {
+    var _storedUser = JSON.parse(localStorage.getItem('heliaUser') || 'null');
+    if (_storedUser && _storedUser.name) {
+      var _nameEl = document.getElementById('userNameDisplay');
+      if (_nameEl) _nameEl.textContent = _storedUser.name;
+    }
+  } catch (_e) {}
+
+  console.log('[prediction] updateDashboardCards complete. Full result:', result);
 }

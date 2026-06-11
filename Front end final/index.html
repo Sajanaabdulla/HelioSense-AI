@@ -1,195 +1,904 @@
 <!DOCTYPE html>
 <html lang="en">
-<html>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>HelioSense AI | AI-Powered Solar Planning Platform</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="css/style.css"/>
-</html>head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HelioSense AI | AI-Powered Solar Planning Platform</title>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HelioSense AI | AI-Powered Solar Planning Platform</title>
+  <link rel="icon" href="data:,">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* ================================================================
+       LANDING PAGE — Premium Design System
+       ================================================================ */
 
-<link rel="icon" href="data:,">
+    /* Section heading with teal underline accent */
+    .section-heading {
+      font-size: 48px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      position: relative;
+      display: inline-block;
+      padding-bottom: 18px;
+    }
+    .section-heading::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 56px;
+      height: 5px;
+      background: linear-gradient(90deg, #0F766E, #14B8A6);
+      border-radius: 3px;
+    }
+    .section-heading--centered::after {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    @media (max-width: 768px) {
+      .section-heading { font-size: 34px; }
+    }
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght..." rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Material..." rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+    .section-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(15,118,110,0.08);
+      border: 1px solid rgba(15,118,110,0.2);
+      color: #0F766E;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 20px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .section-subtext {
+      font-size: 18px;
+      color: #64748B;
+      max-width: 600px;
+      line-height: 1.75;
+      margin-top: 20px;
+    }
+
+    /* ---- Hero ---- */
+    .hero { padding: 140px var(--gutter) 80px; }
+    @media (min-width: 768px) { .hero { padding: 160px var(--gutter) 96px; } }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15,118,110,0.08);
+      border: 1px solid rgba(15,118,110,0.2);
+      color: #0F766E;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 999px;
+      margin-bottom: 28px;
+    }
+
+    .hero-title-main {
+      font-size: 58px;
+      font-weight: 800;
+      color: #0F172A;
+      line-height: 1.08;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    @media (min-width: 768px) { .hero-title-main { font-size: 76px; } }
+
+    .hero-title-accent { color: #0F766E; }
+
+    .hero-stat-row {
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+      margin-top: 40px;
+      padding-top: 36px;
+      border-top: 1px solid #E2E8F0;
+    }
+    .hero-stat { display: flex; flex-direction: column; gap: 3px; }
+    .hero-stat__value { font-size: 26px; font-weight: 700; color: #0F172A; }
+    .hero-stat__label { font-size: 13px; color: #64748B; }
+
+    /* ---- About ---- */
+    .about-section { padding: 100px 0; background: #F8FAFC; }
+
+    .about-prose {
+      font-size: 17px;
+      color: #475569;
+      line-height: 1.85;
+      margin-top: 20px;
+    }
+
+    .about-mini-card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      border: 2px solid transparent;
+      box-shadow: 0 2px 12px rgba(15,118,110,0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .about-mini-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(15,118,110,0.1);
+    }
+    .about-mini-card--green  { border-color: rgba(15,118,110,0.12); }
+    .about-mini-card--blue   { border-color: rgba(37,99,235,0.1);   }
+    .about-mini-card--amber  { border-color: rgba(245,158,11,0.12);  }
+
+    .about-mini-icon {
+      width: 44px; height: 44px; flex-shrink: 0;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+    }
+    .about-mini-icon--green  { background: #D1FAE5; color: #059669; }
+    .about-mini-icon--blue   { background: #DBEAFE; color: #2563EB; }
+    .about-mini-icon--amber  { background: #FEF3C7; color: #D97706; }
+
+    .about-mini-title {
+      font-size: 15px; font-weight: 700; color: #0F172A; margin-bottom: 5px;
+    }
+    .about-mini-text {
+      font-size: 14px; color: #64748B; line-height: 1.6;
+    }
+
+    /* ---- Mission & Vision ---- */
+    .mv-section { padding: 100px 0; background: #F1F5F9; }
+
+    .mv-grid {
+      display: grid;
+      gap: 28px;
+      margin-top: 56px;
+    }
+    @media (min-width: 768px) { .mv-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .mv-card {
+      padding: 44px 40px;
+      border-radius: 20px;
+      border: 2px solid transparent;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .mv-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+    }
+    .mv-card--mission { background: #ECFDF5; border-color: rgba(15,118,110,0.15); }
+    .mv-card--vision  { background: #EFF6FF; border-color: rgba(37,99,235,0.12);  }
+
+    .mv-card__icon {
+      width: 60px; height: 60px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .mv-card__icon--mission { background: #D1FAE5; color: #059669; }
+    .mv-card__icon--vision  { background: #DBEAFE; color: #2563EB; }
+
+    .mv-card__label {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .mv-card--mission .mv-card__label { color: #059669; }
+    .mv-card--vision  .mv-card__label { color: #2563EB; }
+
+    .mv-card__title { font-size: 26px; font-weight: 800; color: #0F172A; margin-bottom: 16px; }
+    .mv-card__text  { font-size: 16px; color: #475569; line-height: 1.75; }
+
+    /* ---- Features ---- */
+    .features-section { padding: 100px 0; background: #F8FAFC; }
+
+    .premium-features-grid {
+      display: grid;
+      gap: 24px;
+      margin-top: 60px;
+    }
+    @media (min-width: 640px)  { .premium-features-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .premium-features-grid { grid-template-columns: repeat(3, 1fr); } }
+
+    .premium-feature-card {
+      background: #FFFFFF;
+      border-radius: 20px;
+      padding: 36px 32px 32px;
+      border: 1px solid #E2E8F0;
+      border-top: 5px solid #0F766E;
+      box-shadow: 0 4px 16px rgba(15,118,110,0.07);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .premium-feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(15,118,110,0.025) 0%, transparent 35%);
+      pointer-events: none;
+    }
+    .premium-feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 48px rgba(15,118,110,0.13);
+    }
+    .premium-feature-card--blue { border-top-color: #2563EB; }
+    .premium-feature-card--blue::before {
+      background: linear-gradient(180deg, rgba(37,99,235,0.025) 0%, transparent 35%);
+    }
+    .premium-feature-card--blue:hover { box-shadow: 0 20px 48px rgba(37,99,235,0.1); }
+
+    .pf-icon {
+      width: 54px; height: 54px;
+      border-radius: 14px;
+      background: rgba(15,118,110,0.1);
+      color: #0F766E;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .pf-icon--blue { background: rgba(37,99,235,0.1); color: #2563EB; }
+
+    .pf-title { font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 12px; }
+    .pf-text  { font-size: 15px; color: #64748B; line-height: 1.7; }
+
+    /* ---- CTA ---- */
+    .cta-section {
+      padding: 100px 0;
+      background: linear-gradient(135deg, #0F172A 0%, #0F3B38 50%, #0F766E 100%);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 50% 0%, rgba(20,184,166,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-inner { position: relative; z-index: 2; }
+    .cta-section h2 {
+      font-size: 46px; font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.025em; margin-bottom: 20px;
+      line-height: 1.15;
+    }
+    @media (max-width: 768px) { .cta-section h2 { font-size: 32px; } }
+    .cta-section p {
+      font-size: 18px; color: rgba(255,255,255,0.7);
+      max-width: 520px; margin: 0 auto 40px; line-height: 1.75;
+    }
+    .btn--cta-white {
+      background: #FFFFFF; color: #0F766E; font-weight: 700;
+      border-radius: 999px; padding: 16px 36px;
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      border: none; cursor: pointer; text-decoration: none;
+    }
+    .btn--cta-white:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.3); }
+    .btn--cta-ghost {
+      background: transparent; color: rgba(255,255,255,0.85);
+      border: 2px solid rgba(255,255,255,0.28); font-weight: 600;
+      border-radius: 999px; padding: 16px 36px; font-size: 16px;
+      display: inline-flex; align-items: center; gap: 8px;
+      cursor: pointer; text-decoration: none;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .btn--cta-ghost:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+    .cta-btn-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    /* ---- Footer ---- */
+    .site-footer { background: #0F172A; border-top: none; padding: 64px 0 0; }
+    .site-footer .footer-inner { align-items: flex-start; gap: 48px; }
+    @media (min-width: 768px) {
+      .site-footer .footer-inner { flex-direction: row; justify-content: space-between; align-items: flex-start; }
+    }
+    .site-footer .footer-brand .logo__title  { color: #FFFFFF; }
+    .site-footer .footer-brand .logo__tagline { color: rgba(255,255,255,0.4); }
+    .site-footer .footer-link { color: rgba(255,255,255,0.5); font-size: 14px; }
+    .site-footer .footer-link:hover { color: #14B8A6; }
+    .footer-bottom {
+      margin-top: 48px;
+      padding: 20px var(--gutter);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      text-align: center;
+    }
+    .footer-bottom p { font-size: 13px; color: rgba(255,255,255,0.3); }
+
+    /* Safety: fix old white-text class on any heading inside a light section */
+    .landing-section .text-white,
+    .about-section .text-white,
+    .mv-section .text-white,
+    .features-section .text-white { color: #0F172A !important; }
+
+    /* Prevent glass-card hover lift on hero image */
+    .hero-visual.glass-card:hover { transform: none; box-shadow: var(--shadow-lg); }
+
+    /* ================================================================
+       GRADIENT HERO — v2
+       ================================================================ */
+    .hero--gradient {
+      background: linear-gradient(135deg, #0A4D48 0%, #0F766E 38%, #14B8A6 78%, #0D9488 100%);
+      padding: 140px var(--gutter) 100px;
+      overflow: hidden;
+      position: relative;
+    }
+    @media (min-width:768px) { .hero--gradient { padding: 180px var(--gutter) 120px; } }
+
+    /* Decorative blobs */
+    .hg-blob {
+      position: absolute; border-radius: 50%;
+      pointer-events: none; filter: blur(90px);
+    }
+    .hg-blob--1 { width:560px; height:560px; top:-140px; right:-80px;  background:rgba(255,255,255,0.08); }
+    .hg-blob--2 { width:380px; height:380px; bottom:-100px; left:8%;   background:rgba(20,184,166,0.18); }
+    .hg-blob--3 { width:260px; height:260px; top:25%; left:33%;        background:rgba(255,255,255,0.05); }
+
+    /* Eyebrow */
+    .hg-eyebrow {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.28);
+      color:#FFFFFF; font-size:11px; font-weight:700; padding:7px 16px;
+      border-radius:999px; margin-bottom:28px;
+      letter-spacing:0.07em; text-transform:uppercase;
+      backdrop-filter:blur(8px);
+    }
+
+    /* Headline */
+    .hg-title {
+      font-size:46px; font-weight:800; color:#FFFFFF;
+      line-height:1.1; letter-spacing:-0.025em; margin-bottom:22px;
+    }
+    @media (min-width:768px) { .hg-title { font-size:62px; } }
+    .hg-title-accent {
+      color:#CCFBF1;
+      border-bottom:3px solid rgba(204,251,241,0.45);
+      padding-bottom:2px;
+    }
+
+    /* Subheading */
+    .hg-sub {
+      font-size:18px; color:rgba(255,255,255,0.8);
+      line-height:1.78; max-width:520px; margin-bottom:36px;
+    }
+
+    /* CTA buttons */
+    .hg-cta-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:48px; }
+
+    .hg-btn-primary {
+      display:inline-flex; align-items:center; gap:8px;
+      background:#FFFFFF; color:#0F766E;
+      font-weight:700; font-size:16px; padding:15px 32px;
+      border-radius:999px; text-decoration:none; border:none; cursor:pointer;
+      box-shadow:0 8px 24px rgba(0,0,0,0.22);
+      transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .hg-btn-primary:hover {
+      background:#F0FDFA; transform:translateY(-2px);
+      box-shadow:0 14px 36px rgba(0,0,0,0.28);
+    }
+
+    .hg-btn-ghost {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(255,255,255,0.1); color:#FFFFFF;
+      font-weight:600; font-size:16px; padding:15px 28px;
+      border-radius:999px; border:1.5px solid rgba(255,255,255,0.32);
+      text-decoration:none; backdrop-filter:blur(8px);
+      transition:background 0.2s ease, border-color 0.2s ease;
+    }
+    .hg-btn-ghost:hover {
+      background:rgba(255,255,255,0.2);
+      border-color:rgba(255,255,255,0.55);
+    }
+
+    /* Stats row */
+    .hg-stats {
+      display:flex; align-items:center; flex-wrap:wrap;
+      padding-top:36px; border-top:1px solid rgba(255,255,255,0.2);
+    }
+    .hg-stat { display:flex; flex-direction:column; gap:3px; padding:0 28px; }
+    .hg-stat:first-child { padding-left:0; }
+    .hg-stat__value { font-size:24px; font-weight:700; color:#FFFFFF; }
+    .hg-stat__label { font-size:12px; color:rgba(255,255,255,0.65); }
+    .hg-stat-sep { width:1px; height:36px; background:rgba(255,255,255,0.22); }
+
+    /* ── Illustration wrapper ── */
+    .hg-illustration {
+      position:relative;
+      display:flex; align-items:center; justify-content:center;
+      padding:48px 0 48px 16px;
+    }
+
+    /* Main glassmorphism card */
+    .hg-main-visual {
+      width:100%; max-width:460px;
+      border-radius:24px; overflow:hidden; position:relative;
+      background:rgba(255,255,255,0.1);
+      backdrop-filter:blur(20px);
+      -webkit-backdrop-filter:blur(20px);
+      border:1px solid rgba(255,255,255,0.25);
+      box-shadow:
+        0 32px 80px rgba(0,0,0,0.35),
+        0 0 0 1px rgba(255,255,255,0.08),
+        inset 0 1px 0 rgba(255,255,255,0.18);
+      animation:hg-float-main 6s ease-in-out infinite;
+    }
+    .hg-main-visual__img {
+      width:100%; aspect-ratio:4/3; object-fit:cover; display:block;
+      filter:brightness(0.82) saturate(1.15);
+    }
+
+    @keyframes hg-float-main {
+      0%,100% { transform:translateY(0); }
+      50%      { transform:translateY(-10px); }
+    }
+
+    /* Scan line */
+    @keyframes hg-scan {
+      0%   { top:-2px; opacity:0.85; }
+      88%  { top:100%;  opacity:0.85; }
+      100% { top:100%;  opacity:0; }
+    }
+    .hg-scan-line {
+      position:absolute; left:0; right:0; height:2px; z-index:5;
+      background:linear-gradient(90deg, transparent 0%, rgba(20,184,166,1) 50%, transparent 100%);
+      box-shadow:0 0 14px 4px rgba(20,184,166,0.5);
+      animation:hg-scan 3s ease-in-out infinite;
+    }
+
+    /* Zone overlays */
+    .hg-zone {
+      position:absolute; border-radius:8px;
+      pointer-events:none; z-index:4;
+    }
+    .hg-zone--optimal {
+      top:25%; left:48%; width:36%; height:32%;
+      border:2px solid rgba(20,184,166,0.9);
+      background:rgba(20,184,166,0.12);
+      animation:hg-zone-pulse 2.5s ease-in-out infinite;
+    }
+    .hg-zone--secondary {
+      top:14%; left:9%; width:27%; height:23%;
+      border:2px solid rgba(245,158,11,0.7);
+      background:rgba(245,158,11,0.08);
+      animation:hg-zone-pulse 3.2s ease-in-out infinite 0.7s;
+    }
+    @keyframes hg-zone-pulse {
+      0%,100% { opacity:0.7; }
+      50%      { opacity:1; }
+    }
+
+    /* In-card badges */
+    .hg-card-badge {
+      position:absolute; z-index:8;
+      display:inline-flex; align-items:center; gap:6px;
+      background:rgba(15,23,42,0.75);
+      backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.16);
+      border-radius:20px; padding:8px 14px;
+      font-size:12px; font-weight:600; color:#FFFFFF;
+      white-space:nowrap;
+    }
+    .hg-card-badge--top    { top:14px; left:14px; }
+    .hg-card-badge--bottom { bottom:14px; right:14px; }
+
+    /* ── Floating metric cards ── */
+    @keyframes hg-float-1 {
+      0%,100% { transform:translateY(0) rotate(-1deg); }
+      50%      { transform:translateY(-12px) rotate(0deg); }
+    }
+    @keyframes hg-float-2 {
+      0%,100% { transform:translateY(0) rotate(1deg); }
+      50%      { transform:translateY(-9px) rotate(0.4deg); }
+    }
+    @keyframes hg-float-3 {
+      0%,100% { transform:translateY(-50%); }
+      50%      { transform:translateY(calc(-50% - 9px)); }
+    }
+
+    .hg-metric {
+      position:absolute;
+      background:rgba(255,255,255,0.96);
+      border:1px solid rgba(255,255,255,0.9);
+      border-radius:16px; padding:14px 18px;
+      display:flex; align-items:center; gap:12px;
+      box-shadow:0 16px 40px rgba(0,0,0,0.22);
+      z-index:12; white-space:nowrap;
+    }
+    .hg-metric__icon {
+      width:38px; height:38px; border-radius:10px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .hg-metric__icon--teal  { background:#CCFBF1; color:#0F766E; }
+    .hg-metric__icon--amber { background:#FEF3C7; color:#D97706; }
+    .hg-metric__value { font-size:16px; font-weight:700; color:#0F172A; }
+    .hg-metric__label { font-size:11px; color:#64748B; margin-top:2px; }
+
+    .hg-metric--1 {
+      top:-22px; left:-32px;
+      animation:hg-float-1 4s ease-in-out infinite;
+    }
+    .hg-metric--2 {
+      bottom:-22px; right:-28px;
+      animation:hg-float-2 4.8s ease-in-out infinite 0.8s;
+    }
+    .hg-metric--3 {
+      top:50%; right:-50px;
+      transform:translateY(-50%);
+      flex-direction:column; text-align:center;
+      padding:16px 14px; min-width:82px; gap:4px;
+      animation:hg-float-3 5s ease-in-out infinite 1.2s;
+    }
+    .hg-metric__score {
+      font-size:22px; font-weight:800; color:#0F766E;
+    }
+
+    /* AI indicator dot on card badge */
+    .hg-ai-dot {
+      width:7px; height:7px; border-radius:50%;
+      background:#14B8A6;
+      box-shadow:0 0 6px rgba(20,184,166,0.8);
+      animation:hg-dot-blink 1.5s ease-in-out infinite;
+    }
+    @keyframes hg-dot-blink {
+      0%,100% { opacity:1; }
+      50%      { opacity:0.35; }
+    }
+  </style>
 </head>
 <body class="bg-mesh landing-body">
 
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
 <header class="site-header">
-<nav class="site-nav">
-<a class="logo logo--compact" href="/">
-<img class="logo__icon" src="assets/logo.svg" alt="" width="40" height="40"/>
-<div class="logo__text">
-<span class="logo__title">HelioSense AI</span>
-<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
-</div>
-</a>
-<div class="nav-links">
-<a class="nav-link" href="#about">About</a>
-<a class="nav-link" href="#mission">Mission</a>
-<a class="nav-link" href="#vision">Vision</a>
-<a class="nav-link" href="#features">Features</a>
-</div>
-<div class="nav-actions">
-<a class="btn-login text-body" href="/login">Login</a>
-<a class="btn btn--primary btn--md btn--pill solar-glow" href="/register">Get Started</a>
-</div>
-</nav>
+  <nav class="site-nav">
+    <a class="logo logo--compact" href="/">
+      <img class="logo__icon" src="assets/logo.svg" alt="HelioSense AI logo" width="40" height="40"/>
+      <div class="logo__text">
+        <span class="logo__title">HelioSense AI</span>
+        <span class="logo__tagline">AI-Powered Solar Planning</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="#about">About</a>
+      <a class="nav-link" href="#mission">Mission</a>
+      <a class="nav-link" href="#vision">Vision</a>
+      <a class="nav-link" href="#features">Features</a>
+    </div>
+    <div class="nav-actions">
+      <a class="btn-login text-body" href="/login">Login</a>
+      <a class="btn btn--primary btn--md btn--pill solar-glow" href="/register">Get Started</a>
+    </div>
+  </nav>
 </header>
 
 <main>
-<section class="hero">
-<div class="hero-grid">
-<div>
-<h1 class="text-display hero-title mb-4">HelioSense AI</h1>
-<p class="hero-subtitle">AI-Powered Rooftop Solar Panel Placement Recommendation System</p>
-<p class="hero-desc mb-10">HelioSense AI helps users identify the optimal rooftop location for solar panel installation, estimate energy generation, analyze electricity consumption and calculate solar investment returns.</p>
-<div class="hero-actions">
-    <a class="btn btn--primary btn--lg solar-glow" href="/register">
-        Get Started
-        <span class="material-symbols-outlined">arrow_forward</span>
-    </a>
 
-    <a class="btn btn--ghost btn--lg glass-card" href="/login">
-        Login
-    </a>
-</div>
-</a>
-</div>
-<div class="hero-image-wrap relative">
-<div class="glow-blob hero-glow--primary"></div>
-<div class="glow-blob hero-glow--secondary"></div>
-<div class="hero-visual glass-card">
-<img class="hero-visual__base" alt="Rooftop satellite imagery with AI solar placement analysis" src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80"/>
-<div class="hero-visual__heatmap"></div>
-<div class="hero-visual__scan"></div>
-<div class="hero-visual__zone hero-visual__zone--best"></div>
-<div class="hero-visual__zone hero-visual__zone--good"></div>
-<div class="hero-visual__label hero-visual__label--top">
-<span class="material-symbols-outlined icon-sm text-accent icon-filled">satellite_alt</span>
-AI Rooftop Analysis
-</div>
-<div class="hero-visual__label hero-visual__label--bottom">
-<span class="material-symbols-outlined icon-sm text-green">check_circle</span>
-Best Solar Panel Placement
-</div>
-</div>
-</div>
-</div>
-</section>
+  <!-- ═══════════════════════ HERO ═══════════════════════ -->
+  <section class="hero hero--gradient" id="hero">
+    <!-- Decorative background blobs -->
+    <div class="hg-blob hg-blob--1"></div>
+    <div class="hg-blob hg-blob--2"></div>
+    <div class="hg-blob hg-blob--3"></div>
 
-<section class="landing-section" id="about">
-<div class="container">
-<div class="section-header">
-<h2 class="text-display text-white">About HelioSense AI</h2>
-</div>
-<div class="about-block glass-card" style="padding:48px">
-<p>HelioSense AI is a complete AI-powered solar planning platform that analyzes rooftops using satellite imagery and intelligent algorithms to recommend the best solar panel placement, estimate energy generation, and calculate return on investment.</p>
-<p class="mt-6">Whether you are a homeowner exploring solar for your residence or a business evaluating commercial installation, HelioSense AI empowers you to make intelligent, data-driven solar installation decisions — from rooftop suitability and panel layout to electricity bill analysis and financial forecasting.</p>
-</div>
-</div>
-</section>
+    <div class="hero-grid" style="position:relative;z-index:2;align-items:center;">
 
-<section class="landing-section landing-section--alt" id="mission">
-<div class="container">
-<div class="section-header">
-<h2 class="text-display text-white">Mission</h2>
-</div>
-<div class="mission-card glass-card" style="max-width:720px;margin:0 auto">
-<div class="mission-card__icon">
-<span class="material-symbols-outlined icon-lg icon-filled">flag</span>
-</div>
-<p class="text-body-lg text-muted">To make solar energy planning simple, intelligent and accessible through AI-powered rooftop analysis.</p>
-</div>
-</div>
-</section>
+      <!-- ── Left: Text ── -->
+      <div>
+        <div class="hg-eyebrow">
+          <span class="material-symbols-outlined icon-sm icon-filled">wb_sunny</span>
+          AI-Powered Solar Intelligence Platform
+        </div>
+        <h1 class="hg-title">
+          AI-Powered Solar Planning for
+          <span class="hg-title-accent">Smarter Energy</span>
+          Decisions
+        </h1>
+        <p class="hg-sub">
+          Analyze rooftops, predict solar generation, calculate ROI, and receive intelligent recommendations through advanced AI.
+        </p>
+        <div class="hg-cta-row">
+          <a class="hg-btn-primary" href="/register">
+            Start Analysis
+            <span class="material-symbols-outlined icon-sm">arrow_forward</span>
+          </a>
+          <a class="hg-btn-ghost" href="#features">
+            <span class="material-symbols-outlined icon-sm">play_circle</span>
+            Explore Features
+          </a>
+        </div>
+        <div class="hg-stats">
+          <div class="hg-stat">
+            <span class="hg-stat__value">98%</span>
+            <span class="hg-stat__label">Analysis Accuracy</span>
+          </div>
+          <div class="hg-stat-sep"></div>
+          <div class="hg-stat">
+            <span class="hg-stat__value">&lt;5 min</span>
+            <span class="hg-stat__label">Full Roof Analysis</span>
+          </div>
+          <div class="hg-stat-sep"></div>
+          <div class="hg-stat">
+            <span class="hg-stat__value">AI</span>
+            <span class="hg-stat__label">Powered by Gemini</span>
+          </div>
+        </div>
+      </div>
 
-<section class="landing-section" id="vision">
-<div class="container">
-<div class="section-header">
-<h2 class="text-display text-white">Vision</h2>
-</div>
-<div class="mission-card glass-card" style="max-width:720px;margin:0 auto">
-<div class="mission-card__icon" style="background:rgba(0,166,224,0.15);color:var(--color-secondary)">
-<span class="material-symbols-outlined icon-lg icon-filled">visibility</span>
-</div>
-<p class="text-body-lg text-muted">To accelerate renewable energy adoption through smart solar planning technologies.</p>
-</div>
-</div>
-</section>
+      <!-- ── Right: Animated solar illustration ── -->
+      <div class="hg-illustration">
+        <!-- Main glassmorphism card -->
+        <div class="hg-main-visual">
+          <img
+            class="hg-main-visual__img"
+            src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80"
+            alt="AI rooftop solar analysis"
+          />
+          <!-- Scanning animation line -->
+          <div class="hg-scan-line"></div>
+          <!-- AI-detected zone overlays -->
+          <div class="hg-zone hg-zone--optimal"></div>
+          <div class="hg-zone hg-zone--secondary"></div>
+          <!-- Top badge: scanning state -->
+          <div class="hg-card-badge hg-card-badge--top">
+            <div class="hg-ai-dot"></div>
+            <span class="material-symbols-outlined icon-sm icon-filled">satellite_alt</span>
+            AI Rooftop Scanning
+          </div>
+          <!-- Bottom badge: result -->
+          <div class="hg-card-badge hg-card-badge--bottom">
+            <span class="material-symbols-outlined icon-sm" style="color:#14B8A6;">check_circle</span>
+            Optimal Zone Detected
+          </div>
+        </div>
 
-<section class="landing-section" id="features">
-<div class="container">
-<div class="section-header">
-<h2 class="text-display text-white">Core Features</h2>
-<p class="text-body-lg text-muted">Everything you need for intelligent solar planning in one platform.</p>
-</div>
-<div class="features-grid features-grid--7">
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">analytics</span></div>
-<h3 class="text-headline text-white mb-3">Rooftop Analysis</h3>
-<p class="text-body text-muted">AI-powered rooftop mapping with shade risk, pitch, and usable area assessment.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">grid_view</span></div>
-<h3 class="text-headline text-white mb-3">Best Solar Panel Placement Recommendation</h3>
-<p class="text-body text-muted">Identify optimal zones on your rooftop for maximum solar energy capture.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">receipt_long</span></div>
-<h3 class="text-headline text-white mb-3">KSEB Bill Analysis</h3>
-<p class="text-body text-muted">Upload or enter electricity consumption data to recommend ideal solar capacity.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">online_prediction</span></div>
-<h3 class="text-headline text-white mb-3">Solar Energy Prediction</h3>
-<p class="text-body text-muted">Forecast monthly and annual energy generation based on rooftop and weather data.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">payments</span></div>
-<h3 class="text-headline text-white mb-3">ROI Calculator</h3>
-<p class="text-body text-muted">Calculate payback period, break-even date, and lifetime savings on your investment.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">description</span></div>
-<h3 class="text-headline text-white mb-3">Smart Reports</h3>
-<p class="text-body text-muted">Generate comprehensive solar analysis reports with PDF download support.</p>
-</div>
-<div class="feature-tile glass-card">
-<div class="feature-tile__icon"><span class="material-symbols-outlined icon-filled">smart_toy</span></div>
-<h3 class="text-headline text-white mb-3">Helia AI Assistant</h3>
-<p class="text-body text-muted">Your smart solar planning assistant for subsidies, panels, ROI, and suitability questions.</p>
-</div>
-</div>
-</div>
-</section>
+        <!-- Floating metric: Annual Generation (top-left) -->
+        <div class="hg-metric hg-metric--1">
+          <div class="hg-metric__icon hg-metric__icon--teal">
+            <span class="material-symbols-outlined icon-sm icon-filled">bolt</span>
+          </div>
+          <div>
+            <div class="hg-metric__value">12,400 kWh</div>
+            <div class="hg-metric__label">Annual Generation</div>
+          </div>
+        </div>
+
+        <!-- Floating metric: Annual Savings (bottom-right) -->
+        <div class="hg-metric hg-metric--2">
+          <div class="hg-metric__icon hg-metric__icon--amber">
+            <span class="material-symbols-outlined icon-sm icon-filled">savings</span>
+          </div>
+          <div>
+            <div class="hg-metric__value">₹75,000</div>
+            <div class="hg-metric__label">Annual Savings</div>
+          </div>
+        </div>
+
+        <!-- Floating metric: Roof Suitability (right-center) -->
+        <div class="hg-metric hg-metric--3">
+          <div class="hg-metric__score">88%</div>
+          <div class="hg-metric__label">Suitability</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ ABOUT ═══════════════════════ -->
+  <section class="about-section" id="about">
+    <div class="container">
+      <div>
+        <span class="section-eyebrow">
+          <span class="material-symbols-outlined icon-sm">info</span>
+          About the Platform
+        </span>
+        <h2 class="section-heading">About HelioSense AI</h2>
+      </div>
+      <div class="about-grid" style="margin-top:52px;">
+        <div>
+          <p class="about-prose">HelioSense AI is an intelligent solar planning platform that combines AI-powered rooftop analysis, energy forecasting, and financial assessment to simplify solar adoption.</p>
+          <p class="about-prose">The platform identifies optimal installation zones, estimates solar generation potential, evaluates rooftop suitability, and calculates return on investment using advanced machine learning and computer vision technologies.</p>
+          <p class="about-prose">Designed for homeowners, businesses, and energy consultants, HelioSense AI transforms complex solar planning into a fast, data-driven decision-making experience.</p>
+          <div style="display:flex;gap:14px;margin-top:36px;flex-wrap:wrap;">
+            <a class="btn btn--primary btn--md" href="/register">
+              Start Analysis
+              <span class="material-symbols-outlined icon-sm">arrow_forward</span>
+            </a>
+            <a class="btn btn--outline btn--md" href="#features">See Features</a>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div class="about-mini-card about-mini-card--green">
+            <div class="about-mini-icon about-mini-icon--green">
+              <span class="material-symbols-outlined icon-filled">analytics</span>
+            </div>
+            <div>
+              <p class="about-mini-title">Computer Vision Rooftop Analysis</p>
+              <p class="about-mini-text">YOLOv8-powered detection with suitability scoring, obstruction mapping, and shade risk assessment.</p>
+            </div>
+          </div>
+          <div class="about-mini-card about-mini-card--blue">
+            <div class="about-mini-icon about-mini-icon--blue">
+              <span class="material-symbols-outlined icon-filled">smart_toy</span>
+            </div>
+            <div>
+              <p class="about-mini-title">Helia AI Solar Consultant</p>
+              <p class="about-mini-text">Gemini-powered assistant that answers your solar questions using your own analysis data as context.</p>
+            </div>
+          </div>
+          <div class="about-mini-card about-mini-card--amber">
+            <div class="about-mini-icon about-mini-icon--amber">
+              <span class="material-symbols-outlined icon-filled">payments</span>
+            </div>
+            <div>
+              <p class="about-mini-title">Dynamic ROI & Financial Modeling</p>
+              <p class="about-mini-text">Calculates payback period, break-even date, and 25-year lifetime savings with live subsidy integration.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ MISSION & VISION ═══════════════════════ -->
+  <section class="mv-section" id="mission">
+    <span id="vision" style="display:block;height:0;overflow:hidden;"></span>
+    <div class="container">
+      <div style="text-align:center;">
+        <span class="section-eyebrow">
+          <span class="material-symbols-outlined icon-sm">flag</span>
+          Purpose &amp; Direction
+        </span>
+        <h2 class="section-heading section-heading--centered">Mission &amp; Vision</h2>
+        <p class="section-subtext" style="margin:24px auto 0;text-align:center;">The purpose and direction behind HelioSense AI.</p>
+      </div>
+      <div class="mv-grid">
+
+        <div class="mv-card mv-card--mission">
+          <div class="mv-card__icon mv-card__icon--mission">
+            <span class="material-symbols-outlined icon-lg icon-filled">flag</span>
+          </div>
+          <p class="mv-card__label">Mission</p>
+          <h3 class="mv-card__title">Our Mission</h3>
+          <p class="mv-card__text">To make solar energy planning accessible, accurate, and intelligent through AI-powered analysis that helps users confidently transition to renewable energy.</p>
+        </div>
+
+        <div class="mv-card mv-card--vision">
+          <div class="mv-card__icon mv-card__icon--vision">
+            <span class="material-symbols-outlined icon-lg icon-filled">visibility</span>
+          </div>
+          <p class="mv-card__label">Vision</p>
+          <h3 class="mv-card__title">Our Vision</h3>
+          <p class="mv-card__text">To accelerate the adoption of clean energy by providing smart solar planning tools that maximize energy generation, reduce costs, and support a sustainable future.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ FEATURES ═══════════════════════ -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div style="text-align:center;">
+        <span class="section-eyebrow">
+          <span class="material-symbols-outlined icon-sm">bolt</span>
+          Platform Capabilities
+        </span>
+        <h2 class="section-heading section-heading--centered">Core Features</h2>
+        <p class="section-subtext" style="margin:24px auto 0;text-align:center;">Everything you need for intelligent solar planning — in one unified platform.</p>
+      </div>
+
+      <div class="premium-features-grid">
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">analytics</span>
+          </div>
+          <h3 class="pf-title">AI Rooftop Analysis</h3>
+          <p class="pf-text">Computer vision rooftop mapping with shade risk, usable area calculation, and optimal placement scoring powered by YOLOv8 object detection.</p>
+        </div>
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">grid_view</span>
+          </div>
+          <h3 class="pf-title">Optimal Solar Placement</h3>
+          <p class="pf-text">Identify the highest-yield installation zones on your rooftop for maximum energy capture, with visual heatmap overlays and zone recommendations.</p>
+        </div>
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">receipt_long</span>
+          </div>
+          <h3 class="pf-title">Energy Consumption Assessment</h3>
+          <p class="pf-text">Upload electricity bills or enter usage manually. HelioSense AI extracts consumption data via OCR and recommends the exact solar capacity you need.</p>
+        </div>
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">online_prediction</span>
+          </div>
+          <h3 class="pf-title">Solar Yield Prediction</h3>
+          <p class="pf-text">Forecast monthly and annual energy generation using real-time weather data, GPS-based irradiance modeling, and machine learning prediction models.</p>
+        </div>
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">payments</span>
+          </div>
+          <h3 class="pf-title">ROI &amp; Payback Analytics</h3>
+          <p class="pf-text">Calculate payback period, break-even date, 25-year lifetime savings, and PM Surya Ghar subsidy impact — dynamically updated from your prediction data.</p>
+        </div>
+
+        <div class="premium-feature-card">
+          <div class="pf-icon">
+            <span class="material-symbols-outlined icon-filled">description</span>
+          </div>
+          <h3 class="pf-title">Smart PDF Reporting</h3>
+          <p class="pf-text">Generate comprehensive, investor-ready solar analysis reports with one click. Export structured PDFs covering rooftop, prediction, and financial analysis.</p>
+        </div>
+
+        <div class="premium-feature-card premium-feature-card--blue">
+          <div class="pf-icon pf-icon--blue">
+            <span class="material-symbols-outlined icon-filled">smart_toy</span>
+          </div>
+          <h3 class="pf-title">Helia AI Assistant</h3>
+          <p class="pf-text">Context-aware solar consultant powered by Gemini. Answers questions about subsidies, system sizing, ROI, and suitability using your own HelioSense analysis results.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ CTA ═══════════════════════ -->
+  <section class="cta-section">
+    <div class="container cta-inner">
+      <h2>Ready to Go Solar?</h2>
+      <p>Start your free AI rooftop analysis today. No hardware, no site visit — upload an image and let HelioSense AI do the work.</p>
+      <div class="cta-btn-row">
+        <a class="btn--cta-white" href="/register">
+          Start Free Analysis
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+        <a class="btn--cta-ghost" href="/login">Login to Platform</a>
+      </div>
+    </div>
+  </section>
+
 </main>
 
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
 <footer class="site-footer">
-<div class="footer-inner">
-<div class="footer-brand">
-<a class="logo logo--sm" href="/">
-<img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
-<div class="logo__text">
-<span class="logo__title">HelioSense AI</span>
-<span class="logo__tagline">AI-Powered Solar Planning Platform</span>
-</div>
-</a>
-<p class="text-label text-muted mt-4">Complete AI-powered solar planning — Final Year Engineering Project.</p>
-</div>
-<div class="footer-links">
-<a class="footer-link" href="#about">About</a>
-<a class="footer-link" href="#mission">Mission</a>
-<a class="footer-link" href="#vision">Vision</a>
-<a class="footer-link" href="#features">Features</a>
-<a class="footer-link" href="/login">Login</a>
-</div>
-<p class="text-label text-secondary footer-copy">© 2024 HelioSense AI. Powering the Renewable Revolution.</p>
-</div>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="logo logo--sm" href="/">
+        <img class="logo__icon" src="assets/logo.svg" alt="" width="32" height="32"/>
+        <div class="logo__text">
+          <span class="logo__title">HelioSense AI</span>
+          <span class="logo__tagline">AI-Powered Solar Planning Platform</span>
+        </div>
+      </a>
+      <p class="text-label mt-4" style="color:rgba(255,255,255,0.4);margin-top:12px;max-width:260px;line-height:1.6;">AI-powered solar planning platform — Final Year Engineering Project.</p>
+    </div>
+    <div class="footer-links" style="flex-direction:column;gap:12px;align-items:flex-start;">
+      <a class="footer-link" href="#about">About</a>
+      <a class="footer-link" href="#mission">Mission</a>
+      <a class="footer-link" href="#vision">Vision</a>
+      <a class="footer-link" href="#features">Features</a>
+      <a class="footer-link" href="/login">Login</a>
+      <a class="footer-link" href="/register">Register</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© 2024 HelioSense AI. Powering the Renewable Revolution.</p>
+  </div>
 </footer>
 
 <script src="js/main.js"></script>

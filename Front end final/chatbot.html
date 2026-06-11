@@ -7,6 +7,47 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist:wght@400;500&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="css/style.css"/>
+<style>
+/* Typing dots animation */
+.typing-dots { display:inline-flex; align-items:center; gap:4px; padding:2px 0; }
+.typing-dots span {
+  display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:#0F766E;
+  animation: helia-bounce 1.2s infinite ease-in-out;
+}
+.typing-dots span:nth-child(2) { animation-delay:.2s; }
+.typing-dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes helia-bounce {
+  0%,80%,100% { transform:translateY(0); opacity:.5; }
+  40%          { transform:translateY(-6px); opacity:1; }
+}
+
+/* Chip suggestions row */
+.chat-chips {
+  display:flex; gap:8px; flex-wrap:wrap;
+  padding:10px 16px 4px;
+  border-top:1px solid #E2E8F0;
+}
+.chat-chip {
+  background:#F8FAFC;
+  border:1px solid #E2E8F0;
+  color:#64748B;
+  border-radius:20px;
+  padding:5px 14px;
+  font-size:12px;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.chat-chip:hover {
+  background:rgba(15,118,110,0.06);
+  border-color:rgba(15,118,110,0.3);
+  color:#0F766E;
+}
+
+/* Markdown bullet helper */
+.chat-msg--ai .helia-bullet { color:#0F766E; margin-right:4px; }
+</style>
 </head>
 <body class="app-body">
 
@@ -65,13 +106,13 @@ Logout
 Home
 </a>
 <div>
-<span class="page-eyebrow text-label">Helia AI</span>
+<span class="page-eyebrow text-label">Solar Assistant</span>
 <h2 class="text-headline text-accent">Helia AI</h2>
-<p class="text-label text-muted">Your friendly solar consultant for predictions, ROI, and rooftop solar planning.</p>
+<p class="text-label text-muted">Context-aware solar consultant — powered by Gemini.</p>
 </div>
 </div>
 <div class="user-profile">
-<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(15,118,110,0.12);border:none">
 <span class="material-symbols-outlined text-accent">smart_toy</span>
 </div>
 </div>
@@ -86,14 +127,27 @@ Clear Chat
 </button>
 </div>
 
-<div class="chat-layout">
-<div class="chat-window glass-card">
+<div class="chat-layout" style="grid-template-columns:1fr">
+<div class="chat-window glass-card" style="display:flex;flex-direction:column">
 <div class="chat-messages" id="chat-messages">
 <div class="chat-msg chat-msg--ai">
 <span class="chat-msg__label">Helia AI</span>
-Hello! I'm Helia, your smart solar planning assistant. Ask me about subsidies, panel requirements, rooftop suitability, ROI, or energy generation.
+Hello! I'm Helia AI, your solar planning consultant. Ask me about predictions, rooftop suitability, ROI calculations, PM Surya Ghar subsidies, or net metering.
 </div>
 </div>
+
+<!-- Chip suggestions row -->
+<div class="chat-chips" id="chat-chips">
+<button class="chat-chip chat-suggestion" type="button" data-question="Explain my solar prediction">Explain my prediction</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="Why is my rooftop suitability score low?">Rooftop suitability</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="Explain my ROI and payback period">Explain my ROI</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="What is the PM Surya Ghar subsidy scheme?">PM Surya Ghar</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="How does net metering work in India?">Net metering</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="How many solar panels do I need?">Panel count</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="What is solar irradiance and how does it affect output?">Solar irradiance</button>
+<button class="chat-chip chat-suggestion" type="button" data-question="How do I reduce my electricity bill with solar?">Cut electricity bill</button>
+</div>
+
 <div class="chat-input-area">
 <input class="chat-input" id="chat-input" type="text" placeholder="Ask Helia about solar, ROI, or rooftop planning..." autocomplete="off"/>
 <button class="btn btn--primary btn--md" id="send-chat-btn" type="button">
@@ -102,24 +156,8 @@ Send
 </button>
 </div>
 </div>
-
-<aside class="chat-suggestions glass-card" style="padding:20px">
-<h4 class="text-headline mb-4">Suggested Questions</h4>
-<button class="chat-suggestion" type="button" data-question="Explain my prediction">Explain my prediction</button>
-<button class="chat-suggestion" type="button" data-question="Explain ROI">Explain ROI</button>
-<button class="chat-suggestion" type="button" data-question="Is solar worth it?">Is solar worth it?</button>
-<button class="chat-suggestion" type="button" data-question="How many panels do I need?">How many panels do I need?</button>
-<button class="chat-suggestion" type="button" data-question="What is solar irradiance?">What is solar irradiance?</button>
-<button class="chat-suggestion" type="button" data-question="What is net metering?">What is net metering?</button>
-</aside>
 </div>
 </main>
-
-<footer class="app-footer">
-<div class="footer-inner" style="justify-content:center">
-<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
-</div>
-</footer>
 </div>
 
 <script src="js/main.js"></script>

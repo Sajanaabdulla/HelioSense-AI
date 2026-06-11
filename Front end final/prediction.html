@@ -70,7 +70,7 @@ Home
 </div>
 </div>
 <div class="user-profile">
-<div class="user-avatar flex items-center justify-center" style="background:rgba(250,204,21,0.2);border:none">
+<div class="user-avatar flex items-center justify-center" style="background:rgba(15,118,110,0.12);border:none">
 <span class="material-symbols-outlined text-accent">person</span>
 </div>
 <span id="userNameDisplay" class="text-label text-bold hidden-mobile">Guest</span>
@@ -79,8 +79,8 @@ Home
 </header>
 
 <main class="page-content space-y-8">
-<div class="prediction-banner glass-card">
-<img alt="Solar farm at sunset" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvpLlZ3BETplFYsAf4uS8GFRUWIwW5lr2F1HNul7hjnP7dIeF4qTyz7-64aqW3l5ogmwAAOcpYIQ7-DMrJCCBrfYMuzXX4RUFO9eF02-dd0e0-IRJ24-39rYFoCIRhSY8znD6kBp--5JOztztlxK9gjy8T-wFslrKOU1VdJQ7ntkfiA3cDldqOLBdNdfcYMUi2aaBIc0XPwP5dRoH1rMZdUYadoDaakF7BM2yLLkxDzR9HbmEV1aLRJgKQi0d3PJuS1SsVR82yeccl"/>
+<div class="prediction-banner">
+<img alt="Energy forest — solar panels among trees" src="https://images.unsplash.com/photo-1509391366360-2e959784a276?w=1400&q=80&fit=crop"/>
 <div class="prediction-banner__overlay"></div>
 <div class="prediction-banner__content">
 <span class="badge badge--accent text-uppercase text-xs">Live Analysis</span>
@@ -92,34 +92,33 @@ Home
 
 <div class="card glass-card prediction-input-card">
 
-    <h3 class="text-headline text-accent">
-        Solar Prediction Factors
-    </h3>
-
-    <p class="text-muted">
-        Choose a location for solar analysis.
-    </p>
+    <div>
+        <h3 class="text-headline text-accent">Solar Prediction Factors</h3>
+        <p class="text-muted mt-2">Choose a location to generate an AI-powered solar yield prediction.</p>
+    </div>
 
     <div class="location-actions">
-        <button id="manualLocationBtn" class="location-btn">
-            🔍 Enter Location
+        <button id="manualLocationBtn" class="btn btn--outline btn--md" type="button">
+            <span class="material-symbols-outlined icon-sm">search</span>
+            Enter Location
         </button>
-
-        <button id="locationBtn" class="btn btn-location">
-            📍 Use Live Location
+        <button id="locationBtn" class="btn btn--ghost btn--md" type="button">
+            <span class="material-symbols-outlined icon-sm">my_location</span>
+            Use Live Location
         </button>
     </div>
 
-    <!-- Manual Location Input Section -->
-    <div id="manualLocationContainer" style="display:none;margin-top:20px;">
+    <!-- Manual Location Input -->
+    <div id="manualLocationContainer" style="display:none;">
+        <label class="text-label text-muted" style="display:block;margin-bottom:8px;">City or Region</label>
         <input
             type="text"
             id="cityInput"
             list="cityList"
-            placeholder="Search Location (e.g. Kochi)"
+            placeholder="Search location (e.g. Kochi, Mumbai)"
             class="location-input"
             autocomplete="off"
-        >
+        />
         <datalist id="cityList">
             <option value="Kochi">
             <option value="Kollam">
@@ -134,22 +133,24 @@ Home
     </div>
 
     <!-- Selected Location Display -->
-    <div id="selectedLocation" style="display:none;margin-top:20px;">
-        <span class="text-label">Selected Location:</span>
-        <span id="selectedCityName" class="text-accent text-bold"></span>
+    <div id="selectedLocation" style="display:none;">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined icon-sm text-accent">location_on</span>
+            <span class="text-label text-muted">Selected:</span>
+            <span id="selectedCityName" class="text-accent text-bold"></span>
+        </div>
     </div>
 
-    <!-- Analyze Button -->
-    <button
-        id="predictBtn"
-        class="btn btn--primary btn--lg solar-glow"
-        style="display:none;margin-top:20px;">
+    <!-- Analyze Button — JS sets display:inline-flex once location is ready -->
+    <button id="predictBtn" class="btn btn--primary btn--lg" type="button"
+            style="display:none;width:100%;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined icon-sm">bolt</span>
         Analyze Solar Potential
     </button>
 
 </div>
 <div class="prediction-grid prediction-grid--metrics">
-<div class="card glass-card prediction-col-4 solar-glow">
+<div class="card glass-card prediction-col-4 solar-glow kpi-potential">
 <div class="flex justify-between items-start mb-4">
 <div>
 <h3 class="text-headline">Potential Score</h3>
@@ -160,8 +161,8 @@ Home
 <div class="gauge-wrap">
 <div class="gauge">
 <svg viewBox="0 0 160 160">
-<circle cx="80" cy="80" r="70" fill="transparent" stroke="rgba(255,255,255,0.05)" stroke-width="12"/>
-<circle cx="80" cy="80" r="70" fill="transparent" stroke="#facc15" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="66"/>
+<circle cx="80" cy="80" r="70" fill="transparent" stroke="#E2E8F0" stroke-width="12"/>
+<circle cx="80" cy="80" r="70" fill="transparent" stroke="#0F766E" stroke-width="12" stroke-dasharray="440" stroke-dashoffset="66"/>
 </svg>
 <div class="gauge__value">
 <span id="potentialScore" class="text-4xl text-bold">—</span>
@@ -178,7 +179,7 @@ Home
 </div>
 </div>
 
-<div class="card glass-card prediction-col-8">
+<div class="card glass-card prediction-col-8 kpi-annual">
 <div class="flex justify-between items-end mb-8">
 <div>
 <h3 id="annualProjection">—</h3>
@@ -201,7 +202,7 @@ Home
 <h4 id="peakSunHours">—</h4>
 <p class="desc">Average Daily Sunlight Availability</p>
 </div>
-<div class="prediction-metric-card glass-card">
+<div class="prediction-metric-card glass-card kpi-capacity">
 <span class="material-symbols-outlined text-accent icon-lg">solar_power</span>
 <p class="text-label text-muted mt-4">Recommended Solar Capacity</p>
 <h4 id="solarCapacity">—</h4>
@@ -219,7 +220,7 @@ Home
 <h4 id="energyCoverage">—</h4>
 <p class="desc">of Current Consumption Covered</p>
 </div>
-<div class="prediction-metric-card glass-card">
+<div class="prediction-metric-card glass-card kpi-savings">
 <span class="material-symbols-outlined text-accent icon-lg">currency_rupee</span>
 <p class="text-label text-muted mt-4">Estimated Savings</p>
 <h4 id="estimatedSavings">—</h4>
@@ -232,13 +233,19 @@ Home
 <p class="desc">Estimated annual CO₂ reduction</p>
 </div>
 </div>
-</main>
 
-<footer class="app-footer">
-<div class="footer-inner" style="justify-content:center">
-<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+<!-- Prediction Action Buttons -->
+<div class="prediction-actions" id="predictionActions" style="display:none;">
+<button id="downloadPredictionBtn" class="btn btn--blue btn--md" type="button">
+    <span class="material-symbols-outlined icon-sm">download</span>
+    Download Report
+</button>
+<button id="resetPredictionBtn" class="btn btn--amber btn--md" type="button">
+    <span class="material-symbols-outlined icon-sm">refresh</span>
+    Reset Prediction
+</button>
 </div>
-</footer>
+</main>
 </div>
 <script src="js/main.js"></script>
 </body>

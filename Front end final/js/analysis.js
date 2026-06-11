@@ -15,9 +15,18 @@
     var origPreview   = document.getElementById('original-preview');
     var dropContent   = dropZone ? dropZone.querySelector('.relative.z-10') : null;
 
-    var selectedFile = null;
-    var lastResult   = null;
-    var API_BASE     = window.HELIOSENSE_API_URL || '';
+    var selectedFile  = null;
+    var lastResult    = null;
+    var heatmapZoom   = 1.0;
+    var heatmapThumb  = document.getElementById('heatmap-thumb');
+    var heatmapModal  = document.getElementById('heatmap-modal');
+    var heatmapMImg   = document.getElementById('heatmap-modal-img');
+    // When opened via VS Code Live Server (port 5500) rather than Flask (port 5000),
+    // relative URLs resolve to the Live Server — which cannot handle POST requests.
+    // Explicitly target the Flask backend in that case.
+    var API_BASE = window.HELIOSENSE_API_URL ||
+      (window.location.port === '5500' ? 'http://localhost:5000' : '');
+    console.log('[HelioSense] Rooftop analysis — API base:', API_BASE || '(relative — served by Flask)');
     var toast = window.showToast || function (msg, t) {
       try {
         var d = document.createElement('div');
@@ -41,10 +50,15 @@
     }
 
     function applyResult(data) {
-      var totalM2  = data.total_roof_area != null ? data.total_roof_area  + ' m²' : '—';
-      var usableM2 = data.usable_area     != null ? data.usable_area      + ' m²' : '—';
-      var pct = (data.total_roof_area && data.usable_area)
-        ? Math.round(data.usable_area / data.total_roof_area * 100) : 0;
+      // Prefer the explicit field names; fall back to legacy keys for older responses
+      var roofM2val   = data.roof_area_m2   != null ? data.roof_area_m2   : data.total_roof_area;
+      var usableM2val = data.usable_area_m2 != null ? data.usable_area_m2 : data.usable_area;
+      var obsM2val    = data.obstruction_area_m2 != null ? data.obstruction_area_m2 : null;
+
+      var totalM2  = roofM2val   != null ? roofM2val   + ' m²' : '—';
+      var usableM2 = usableM2val != null ? usableM2val + ' m²' : '—';
+      var pct = (roofM2val && usableM2val)
+        ? Math.round(usableM2val / roofM2val * 100) : 0;
 
       var el;
       el = safeEl('roofAreaValue');      if (el) el.textContent = totalM2;
@@ -55,13 +69,25 @@
       el = safeEl('placementValue');
       if (el) el.textContent = (data.recommended_capacity_kw || '—') + ' kW · ' + (data.panel_count || '—') + ' panels';
       el = safeEl('pitchValue');
-      if (el) el.textContent = (data.suitability_score != null ? data.suitability_score + '/100' : '—');
+      if (el) el.textContent = data.confidence != null ? data.confidence + '%' : '—';
       el = safeEl('obstructionsValue');
-      if (el) el.textContent = data.obstruction_count != null ? data.obstruction_count : '—';
+      if (el) {
+        var obsText = data.obstruction_count != null ? data.obstruction_count + ' detected' : '—';
+        if (obsM2val != null) obsText += ' (' + obsM2val + ' m²)';
+        el.textContent = obsText;
+      }
 
-      if (heatmapImg && data.overlay_image) {
-        heatmapImg.src = data.overlay_image;
-        heatmapImg.alt = 'Solar placement overlay';
+      var overlayImg = document.getElementById('heatmap-img') || heatmapImg;
+      if (overlayImg && data.overlay_image) {
+        overlayImg.src = data.overlay_image;
+        overlayImg.alt = 'Solar placement overlay';
+      }
+      if (heatmapMImg && data.overlay_image) {
+        heatmapMImg.src = data.overlay_image;
+      }
+
+      if (data._debug) {
+        console.log('[HelioSense] Detection debug:', data._debug);
       }
 
       lastResult = data;
@@ -71,17 +97,22 @@
 
     function downloadReport() {
       if (!lastResult) { toast('No analysis available to download'); return; }
+      var roofVal   = lastResult.roof_area_m2   != null ? lastResult.roof_area_m2   : lastResult.total_roof_area;
+      var usableVal = lastResult.usable_area_m2 != null ? lastResult.usable_area_m2 : lastResult.usable_area;
       var lines = [
         'Rooftop Analysis Report',
         '-----------------------',
-        'Total Roof Area:        ' + (lastResult.total_roof_area || '—') + ' m²',
-        'Usable Roof Area:       ' + (lastResult.usable_area     || '—') + ' m²',
-        'Suitability Score:      ' + (lastResult.suitability_score != null ? lastResult.suitability_score + '/100' : '—'),
-        'Shade Risk:             ' + (lastResult.shade_risk       || '—'),
-        'Obstruction Count:      ' + (lastResult.obstruction_count != null ? lastResult.obstruction_count : '—'),
+        'Total Roof Area:        ' + (roofVal   || '—') + ' m²  (estimated)',
+        'Usable Roof Area:       ' + (usableVal || '—') + ' m²  (estimated)',
+        'Setback Area:           ' + (lastResult.setback_area_m2       != null ? lastResult.setback_area_m2       + ' m²' : '—'),
+        'Obstruction Area:       ' + (lastResult.obstruction_area_m2   != null ? lastResult.obstruction_area_m2   + ' m²' : '—'),
+        'Suitability Score:      ' + (lastResult.suitability_score     != null ? lastResult.suitability_score     + '/100' : '—'),
+        'Confidence:             ' + (lastResult.confidence            != null ? lastResult.confidence            + '%'    : '—'),
+        'Shade Risk:             ' + (lastResult.shade_risk            || '—'),
+        'Obstruction Count:      ' + (lastResult.obstruction_count     != null ? lastResult.obstruction_count     : '—'),
         'Recommended Capacity:   ' + (lastResult.recommended_capacity_kw || '—') + ' kW',
-        'Panel Count:            ' + (lastResult.panel_count      || '—'),
-        'Analysis Method:        ' + (lastResult.analysis_method  || '—'),
+        'Panel Count:            ' + (lastResult.panel_count           || '—'),
+        'Analysis Method:        ' + (lastResult.analysis_method       || '—'),
       ];
       var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
       var url  = URL.createObjectURL(blob);
@@ -177,9 +208,27 @@
         var form = new FormData();
         form.append('image', selectedFile);
 
-        fetch(API_BASE + '/analyze-rooftop', { method: 'POST', body: form })
+        var endpoint = API_BASE + '/analyze-rooftop';
+        console.log('[HelioSense] POST', endpoint);
+        fetch(endpoint, { method: 'POST', body: form })
           .then(function (resp) {
-            if (!resp.ok) throw new Error('Server error ' + resp.status);
+            var ct = resp.headers.get('content-type') || '';
+            if (!resp.ok) {
+              if (ct.indexOf('application/json') !== -1) {
+                return resp.json().then(function (errData) {
+                  throw new Error('HTTP ' + resp.status + ': ' + (errData.error || resp.statusText));
+                });
+              }
+              return resp.text().then(function (body) {
+                throw new Error('HTTP ' + resp.status + ' ' + resp.statusText +
+                  (body ? ' — ' + body.slice(0, 200) : ''));
+              });
+            }
+            if (ct.indexOf('application/json') === -1) {
+              return resp.text().then(function (body) {
+                throw new Error('Expected JSON but got "' + ct + '". Is the request hitting Flask? Response: ' + body.slice(0, 200));
+              });
+            }
             return resp.json();
           })
           .then(function (data) {
@@ -189,6 +238,7 @@
             toast('Rooftop analysis complete.');
           })
           .catch(function (err) {
+            console.error('[HelioSense] Rooftop analysis error:', err);
             toast('Analysis failed: ' + err.message, 6000);
           })
           .finally(function () {
@@ -206,6 +256,39 @@
       });
       downloadBtn.disabled = true;
     }
+
+    // ── heatmap fullscreen modal ──────────────────────────────────────────────
+    function openHeatmapModal() {
+      if (!heatmapModal) return;
+      heatmapZoom = 1.0;
+      if (heatmapMImg) heatmapMImg.style.transform = 'scale(1)';
+      heatmapModal.style.display = 'flex';
+    }
+    function closeHeatmapModal() {
+      if (heatmapModal) heatmapModal.style.display = 'none';
+    }
+    function applyZoom() {
+      if (heatmapMImg) heatmapMImg.style.transform = 'scale(' + heatmapZoom + ')';
+    }
+
+    if (heatmapThumb) {
+      heatmapThumb.addEventListener('click', openHeatmapModal);
+    }
+    var mClose = document.getElementById('heatmap-modal-close');
+    if (mClose) mClose.addEventListener('click', closeHeatmapModal);
+
+    if (heatmapModal) {
+      heatmapModal.addEventListener('click', function (e) {
+        if (e.target === heatmapModal) closeHeatmapModal();
+      });
+    }
+
+    var zoomIn = document.getElementById('heatmap-zoom-in');
+    var zoomOut = document.getElementById('heatmap-zoom-out');
+    var zoomReset = document.getElementById('heatmap-zoom-reset');
+    if (zoomIn)    zoomIn.addEventListener('click',    function () { heatmapZoom = Math.min(5, heatmapZoom + 0.25); applyZoom(); });
+    if (zoomOut)   zoomOut.addEventListener('click',   function () { heatmapZoom = Math.max(0.5, heatmapZoom - 0.25); applyZoom(); });
+    if (zoomReset) zoomReset.addEventListener('click', function () { heatmapZoom = 1.0; applyZoom(); });
   }
 
   window.initAnalysis = initAnalysis;

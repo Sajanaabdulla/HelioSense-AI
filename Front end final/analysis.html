@@ -126,12 +126,12 @@ Download Result
 
 <div class="flex flex-col gap-6">
 <div class="grid-2">
-<div class="card glass-panel">
+<div class="card glass-panel kpi-roof-area">
 <p class="text-label text-muted mb-1">Roof Area</p>
 <h4 id="roofAreaValue" class="text-3xl text-bold text-accent">—</h4>
 <div class="progress progress--thin mt-4"><div id="roofAreaProgress" class="progress__fill progress__fill--accent" style="width:0%"></div></div>
 </div>
-<div class="card glass-panel">
+<div class="card glass-panel kpi-usable-area">
 <p class="text-label text-muted mb-1">Usable Area</p>
 <h4 id="usableAreaValue" class="text-3xl text-bold text-secondary">—</h4>
 <div class="progress progress--thin mt-4"><div id="usableAreaProgress" class="progress__fill progress__fill--secondary" style="width:0%"></div></div>
@@ -144,40 +144,46 @@ Download Result
 <span class="badge badge--success">Calculated</span>
 </div>
 <div class="space-y-6">
-<div class="detail-row">
+<div class="detail-row detail-row--shade">
 <div class="detail-row__left"><span class="material-symbols-outlined text-secondary">wb_sunny</span> Shade Risk</div>
 <span id="shadeRiskValue" class="badge badge--success">—</span>
 </div>
-<div class="detail-row">
+<div class="detail-row detail-row--placement">
 <div class="detail-row__left"><span class="material-symbols-outlined text-accent">explore</span> Best Placement</div>
 <span id="placementValue" class="text-bold">—</span>
 </div>
-<div class="detail-row">
-<div class="detail-row__left"><span class="material-symbols-outlined text-tertiary-bright">architecture</span> Average Pitch</div>
+<div class="detail-row detail-row--confidence">
+<div class="detail-row__left"><span class="material-symbols-outlined text-tertiary-bright">verified</span> Confidence</div>
 <span id="pitchValue" class="text-bold">—</span>
 </div>
-<div class="detail-row">
+<div class="detail-row detail-row--obstruction">
 <div class="detail-row__left"><span class="material-symbols-outlined text-error">warning</span> Obstructions</div>
 <span id="obstructionsValue" class="text-bold">—</span>
 </div>
 </div>
-<div class="heatmap mt-8">
-<img alt="Rooftop heatmap" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDu-bgxoJYTHl4ijrgP06Kw9NJsvlN0fvvZdWv-TBpR99fDK5JT6SXHwyqKzSpu8_Z78P4AgeKyY4gkzXBm_UMyF4k_VtWuNbzLykb70C_ricCBTgGOMFlWSYOiM8uTX21n_n8HbLkMhu_A04U8ohHAwTgcY6M3Yw7hHen68VSgilp5G-y5s-LC-4SBziz90imwbdndpuf4LEkpD4rvh0Cwg2tcX0hvIHNYXHqExCvlTmlJEVCSfSoeGKleAKZC21whFy1k3v1-Hv5V"/>
-<div class="map-gradient absolute inset-0"></div>
+<div class="heatmap mt-8" id="heatmap-thumb" style="cursor:pointer" title="Click to expand overlay">
+<img id="heatmap-img" alt="Rooftop heatmap" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDu-bgxoJYTHl4ijrgP06Kw9NJsvlN0fvvZdWv-TBpR99fDK5JT6SXHwyqKzSpu8_Z78P4AgeKyY4gkzXBm_UMyF4k_VtWuNbzLykb70C_ricCBTgGOMFlWSYOiM8uTX21n_n8HbLkMhu_A04U8ohHAwTgcY6M3Yw7hHen68VSgilp5G-y5s-LC-4SBziz90imwbdndpuf4LEkpD4rvh0Cwg2tcX0hvIHNYXHqExCvlTmlJEVCSfSoeGKleAKZC21whFy1k3v1-Hv5V"/>
 <div class="heatmap__label">
-<span class="material-symbols-outlined text-accent icon-sm icon-filled">location_on</span>
+<span class="material-symbols-outlined text-accent icon-sm icon-filled">open_in_full</span>
 <span class="text-label text-white">Heatmap View</span>
 </div>
 </div>
-</div>
-</div>
-</div>
 
-<footer class="app-footer mt-12">
-<div class="footer-inner" style="justify-content:flex-start;padding-left:0">
-<p class="text-label text-muted">© 2024 HelioSense AI — Final Year Project</p>
+<!-- Fullscreen overlay modal -->
+<div id="heatmap-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);flex-direction:column;align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:90vw;max-height:90vh;overflow:auto;">
+    <img id="heatmap-modal-img" alt="Overlay fullscreen" style="max-width:100%;max-height:80vh;border-radius:8px;transform-origin:top left;transition:transform 0.2s;"/>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:16px;">
+    <button id="heatmap-zoom-in"  style="background:#F8FAFC;color:#059669;border:1px solid #D1FAE5;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:18px;" title="Zoom in">+</button>
+    <button id="heatmap-zoom-out" style="background:#F8FAFC;color:#059669;border:1px solid #D1FAE5;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:18px;" title="Zoom out">−</button>
+    <button id="heatmap-zoom-reset" style="background:#F8FAFC;color:#64748B;border:1px solid #E2E8F0;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:13px;" title="Reset zoom">1:1</button>
+    <button id="heatmap-modal-close" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:13px;" title="Close">Close</button>
+  </div>
 </div>
-</footer>
+</div>
+</div>
+</div>
 </main>
 </div>
 
