@@ -18,6 +18,18 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
 
+# Startup diagnostics — visible in Render/gunicorn logs immediately
+_gemini_key_present = bool(os.environ.get("GEMINI_API_KEY", "").strip())
+print(f"[helia] GEMINI_API_KEY found: {_gemini_key_present}")
+if not _gemini_key_present:
+    print("[helia] WARNING: GEMINI_API_KEY not set — chatbot will use keyword fallback only")
+
+try:
+    import google.generativeai as _genai_test   # noqa: F401
+    print("[helia] google-generativeai: import OK")
+except ImportError as _e:
+    print(f"[helia] google-generativeai: IMPORT FAILED — {_e}")
+
 
 # ==========================
 # WEBSITE ROUTES
@@ -218,64 +230,74 @@ def health():
 def predict_solar():
 
     try:
+        print("[predict] PREDICT-SOLAR REQUEST RECEIVED")
         data = request.get_json(force=True, silent=True)
 
         if data is None:
-            return jsonify({
-                "error": "Request body must be valid JSON."
-            }), 400
+            print("[predict] ERROR: No valid JSON body")
+            return jsonify({"error": "Request body must be valid JSON."}), 400
 
-        required = [
-            "latitude",
-            "longitude",
-            "temperature",
-            "humidity",
-            "wind_speed"
-        ]
+        print("[predict] Inputs:", {
+            "latitude":       data.get("latitude"),
+            "longitude":      data.get("longitude"),
+            "temperature":    data.get("temperature"),
+            "humidity":       data.get("humidity"),
+            "wind_speed":     data.get("wind_speed"),
+            "cloud_cover_pct": data.get("cloud_cover_pct"),
+        })
 
-        missing = [
-            field for field in required
-            if field not in data
-        ]
-
+        required = ["latitude", "longitude", "temperature", "humidity", "wind_speed"]
+        missing = [f for f in required if f not in data]
         if missing:
-            return jsonify({
-                "error": f"Missing fields: {missing}"
-            }), 422
+            print("[predict] ERROR: Missing fields:", missing)
+            return jsonify({"error": f"Missing fields: {missing}"}), 422
 
-        lat = float(data["latitude"])
-        lon = float(data["longitude"])
+        lat  = float(data["latitude"])
+        lon  = float(data["longitude"])
         temp = float(data["temperature"])
-        hum = float(data["humidity"])
-        ws = float(data["wind_speed"])
+        hum  = float(data["humidity"])
+        ws   = float(data["wind_speed"])
 
         date = None
-
         if data.get("date"):
-            date = datetime.strptime(
-                data["date"],
-                "%Y-%m-%d"
-            )
+            date = datetime.strptime(data["date"], "%Y-%m-%d")
 
+        cloud_cover_pct = None
+        if data.get("cloud_cover_pct") is not None:
+            cloud_cover_pct = float(data["cloud_cover_pct"])
+
+        print("[predict] CALLING predict()...")
         result = predict(
             latitude=lat,
             longitude=lon,
             temperature=temp,
             humidity=hum,
             wind_speed=ws,
-            date=date
+            date=date,
+            cloud_cover_pct=cloud_cover_pct,
         )
+
+        print("[predict] SUCCESS:", {
+            "potential_score":      result.get("potential_score"),
+            "peak_sun_hours":       result.get("peak_sun_hours"),
+            "recommended_capacity": result.get("recommended_capacity"),
+            "panel_count":          result.get("panel_count"),
+            "annual_projection":    result.get("annual_projection"),
+            "energy_coverage":      result.get("energy_coverage"),
+            "suitability":          result.get("suitability"),
+            "confidence":           result.get("confidence"),
+        })
 
         return jsonify(result)
 
     except FileNotFoundError as e:
-
-        return jsonify({
-            "error": str(e),
-            "hint": "Run train_model.py first"
-        }), 503
+        print("[predict] ERROR: Model file not found:", str(e))
+        return jsonify({"error": str(e), "hint": "Run train_model.py first"}), 503
 
     except Exception as e:
+        import traceback
+        print("[predict] UNHANDLED EXCEPTION:")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/<path:path>', methods=['GET'])
@@ -289,140 +311,286 @@ def static_files(path):
         return send_from_directory(FRONTEND_FOLDER, 'index.html')
     return jsonify({"error": "File not found"}), 404
 
+# ==========================
+# HELIA AI — GEMINI BACKEND
+# ==========================
+
+_SYSTEM_PROMPT = (
+    "You are Helia, a friendly and knowledgeable solar energy consultant at HelioSense AI — "
+    "a platform helping Indian households and businesses plan and switch to solar.\n\n"
+
+    "TONE AND STYLE:\n"
+    "- Speak like a helpful consultant talking to a customer, not a textbook or manual\n"
+    "- Be warm, clear, and direct — like a knowledgeable friend who knows solar\n"
+    "- Keep most answers to 3–5 sentences or under ~150 words\n"
+    "- Use bullet points (•) only when listing multiple distinct items\n"
+    "- Write short paragraphs, not walls of text\n"
+    "- If the user asks for more detail, you may go longer\n\n"
+
+    "WHAT NEVER TO SAY:\n"
+    "- Never say 'From the knowledge base', 'According to the document', "
+    "'The uploaded file states', 'retrieved context', or any reference to PDFs, "
+    "source files, or chunks — just answer naturally as a consultant would\n"
+    "- Never use passive, robotic phrases like 'A solar system may generate...'\n\n"
+
+    "HOW TO USE THE USER'S DATA:\n"
+    "- When the user's analysis results are provided, always reference those real numbers naturally\n"
+    "- Example: instead of 'A solar system may generate...', say "
+    "'Based on your analysis, your recommended system is 8.4 kW and could generate "
+    "around 12,400 kWh per year.'\n"
+    "- Never fabricate figures. If specific data is not available, say so plainly and move on\n\n"
+
+    "YOUR AREAS OF EXPERTISE:\n"
+    "- Solar system sizing, panel count, capacity, and performance\n"
+    "- Rooftop analysis: total area, usable area, obstructions, shading, suitability\n"
+    "- Financial planning: installation cost, ROI, payback period, annual savings\n"
+    "- Net metering and grid-tied solar systems\n"
+    "- Indian government schemes: PM Surya Ghar, MNRE subsidies, DISCOM regulations\n"
+    "- Electricity bill analysis and consumption-based sizing\n\n"
+
+    "Use ₹ for currency. Keep it conversational and genuinely helpful."
+)
+
+
+def _fmt_prediction(p):
+    if not isinstance(p, dict):
+        return ''
+    lines = []
+    if p.get('predicted_irradiance') is not None:
+        lines.append(f"Solar Irradiance: {p['predicted_irradiance']} kWh/m²/day")
+    if p.get('potential_score') is not None:
+        lines.append(f"Solar Potential Score: {p['potential_score']}/100")
+    if p.get('peak_sun_hours') is not None:
+        lines.append(f"Peak Sun Hours: {p['peak_sun_hours']} hrs/day")
+    if p.get('recommended_capacity') is not None:
+        lines.append(f"Recommended System Capacity: {p['recommended_capacity']} kW")
+    if p.get('annual_projection') is not None:
+        lines.append(f"Annual Energy Generation: {p['annual_projection']} kWh/year")
+    if p.get('energy_coverage') is not None:
+        lines.append(f"Energy Coverage of Demand: {p['energy_coverage']}%")
+    if p.get('suitability') is not None:
+        lines.append(f"Suitability Rating: {p['suitability']}")
+    if isinstance(p.get('inputs'), dict):
+        inp = p['inputs']
+        parts = []
+        if inp.get('latitude'):  parts.append(f"lat={inp['latitude']}")
+        if inp.get('longitude'): parts.append(f"lon={inp['longitude']}")
+        if inp.get('temperature') is not None: parts.append(f"temp={inp['temperature']}°C")
+        if inp.get('humidity') is not None: parts.append(f"humidity={inp['humidity']}%")
+        if inp.get('cloud_cover_pct') is not None: parts.append(f"cloud={inp['cloud_cover_pct']}%")
+        if parts:
+            lines.append(f"Input conditions: {', '.join(parts)}")
+    return '\n'.join(lines)
+
+
+def _fmt_rooftop(r):
+    if not isinstance(r, dict):
+        return ''
+    lines = []
+    if r.get('roof_area_m2') is not None:
+        lines.append(f"Total Roof Area: {r['roof_area_m2']} m²")
+    if r.get('usable_area_m2') is not None:
+        lines.append(f"Usable Solar Area: {r['usable_area_m2']} m²")
+    if r.get('setback_area_m2') is not None:
+        lines.append(f"Edge Setback Area: {r['setback_area_m2']} m²")
+    if r.get('obstruction_area_m2') is not None:
+        lines.append(f"Obstruction Area: {r['obstruction_area_m2']} m²")
+    if r.get('suitability_score') is not None:
+        lines.append(f"Suitability Score: {r['suitability_score']}/100")
+    if r.get('shade_risk') is not None:
+        lines.append(f"Shade Risk: {r['shade_risk']}")
+    if r.get('obstruction_count') is not None:
+        lines.append(f"Obstructions Detected: {r['obstruction_count']}")
+    if r.get('recommended_capacity_kw') is not None:
+        lines.append(f"Recommended Capacity: {r['recommended_capacity_kw']} kW")
+    if r.get('panel_count') is not None:
+        lines.append(f"Recommended Panel Count: {r['panel_count']}")
+    if r.get('confidence') is not None:
+        lines.append(f"Analysis Confidence: {r['confidence']}%")
+    if r.get('analysis_method'):
+        lines.append(f"Detection Method: {r['analysis_method']}")
+    return '\n'.join(lines)
+
+
+def _fmt_roi(r):
+    if not isinstance(r, dict):
+        return ''
+    lines = []
+    try:
+        if r.get('installation_cost') is not None:
+            lines.append(f"Installation Cost: ₹{float(r['installation_cost']):,.0f}")
+        if r.get('annual_savings') is not None:
+            lines.append(f"Annual Savings: ₹{float(r['annual_savings']):,.0f}")
+        if r.get('payback_period') is not None:
+            lines.append(f"Payback Period: {float(r['payback_period']):.1f} years")
+        if r.get('roi_percentage') is not None:
+            lines.append(f"ROI: {float(r['roi_percentage']):.1f}%")
+        if r.get('lifetime_savings') is not None:
+            lines.append(f"25-Year Lifetime Savings: ₹{float(r['lifetime_savings']):,.0f}")
+    except (TypeError, ValueError):
+        pass
+    return '\n'.join(lines)
+
+
+def _gemini_answer(question, prediction, rooftop, roi, chunks, history):
+    """Call Gemini 1.5 Flash. Returns None if key is missing or call fails."""
+    api_key = os.environ.get('GEMINI_API_KEY', '').strip()
+    if not api_key:
+        return None
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+
+        model = genai.GenerativeModel(
+            'gemini-1.5-flash',
+            system_instruction=_SYSTEM_PROMPT,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.5,
+                max_output_tokens=500,
+            ),
+        )
+
+        ctx_sections = []
+        if chunks:
+            kb = '\n'.join(c['chunk'] for c in chunks)
+            ctx_sections.append(
+                f"BACKGROUND INFO (internal — do not cite or mention the source; "
+                f"weave into your answer naturally):\n{kb}"
+            )
+        pred_str = _fmt_prediction(prediction)
+        if pred_str:
+            ctx_sections.append(f"USER'S SOLAR PREDICTION:\n{pred_str}")
+        roof_str = _fmt_rooftop(rooftop)
+        if roof_str:
+            ctx_sections.append(f"USER'S ROOFTOP ANALYSIS:\n{roof_str}")
+        roi_str = _fmt_roi(roi)
+        if roi_str:
+            ctx_sections.append(f"USER'S ROI DATA:\n{roi_str}")
+
+        context_block = '\n\n'.join(ctx_sections)
+
+        # Convert history for Gemini — must alternate user/model, starting with user
+        gemini_history = []
+        expected = 'user'
+        for msg in (history or [])[-10:]:
+            role = msg.get('role', '')
+            text = (msg.get('text') or '').strip()
+            gemini_role = 'user' if role == 'user' else 'model'
+            if gemini_role != expected or not text:
+                continue
+            gemini_history.append({'role': gemini_role, 'parts': [text]})
+            expected = 'model' if expected == 'user' else 'user'
+
+        chat = model.start_chat(history=gemini_history)
+        full_msg = f"{context_block}\n\nQuestion: {question}" if context_block else question
+        resp = chat.send_message(full_msg)
+        return resp.text.strip()
+
+    except Exception as exc:
+        app.logger.warning('Gemini error: %s', exc)
+        return None
+
+
+def _fallback_answer(question, prediction, roi, chunks):
+    """Keyword-based fallback when Gemini is unavailable."""
+    text = question.lower()
+
+    if any(g in text for g in ['hi', 'hello', 'hey', 'good morning', 'good evening']):
+        return (
+            "Hello! I'm Helia AI, your solar planning consultant. "
+            "Ask me about solar predictions, ROI, rooftop analysis, subsidies, or net metering."
+        )
+    if 'thank' in text:
+        return "You're welcome! Feel free to ask more solar planning questions."
+
+    if any(k in text for k in ['explain', 'prediction', 'forecast', 'irradiance', 'peak sun', 'score', 'coverage']):
+        if isinstance(prediction, dict) and prediction.get('potential_score') is not None:
+            score  = prediction.get('potential_score', 'N/A')
+            cap    = prediction.get('recommended_capacity', 'N/A')
+            annual = prediction.get('annual_projection', 'N/A')
+            irr    = prediction.get('predicted_irradiance', 'N/A')
+            return (
+                f"Your location has a solar potential score of {score}/100 with "
+                f"{irr} kWh/m²/day irradiance. "
+                f"A {cap} kW system is recommended, generating ~{annual} kWh/year."
+            )
+
+    if any(k in text for k in ['roi', 'return', 'payback', 'savings', 'cost', 'investment', 'break']):
+        if isinstance(roi, dict) and roi.get('payback_period') is not None:
+            try:
+                pb  = float(roi['payback_period'])
+                sav = float(roi.get('annual_savings', 0))
+                return (
+                    f"Your system has a payback period of {pb:.1f} years "
+                    f"with annual savings of ₹{sav:,.0f}."
+                )
+            except (TypeError, ValueError):
+                pass
+
+    return (
+        "That's a good question — I'd need a bit more context to give you a precise answer. "
+        "I can help with solar system sizing, rooftop suitability, ROI, PM Surya Ghar subsidies, "
+        "and net metering. Could you tell me a bit more about what you're looking for?"
+    )
+
+
 @app.route('/chat-query', methods=['POST'])
 def chat_query():
-    data = request.get_json(force=True, silent=True) or {}
-    question = (data.get('question') or '').strip()
-    prediction = data.get('prediction')
-    roi = data.get('roi')
+    try:
+        print("[helia] CHAT REQUEST RECEIVED")
+        data = request.get_json(force=True, silent=True) or {}
+        print("[helia] REQUEST BODY:", {
+            'question':   (data.get('question') or '')[:120],
+            'prediction': bool(data.get('prediction')),
+            'rooftop':    bool(data.get('rooftop')),
+            'roi':        bool(data.get('roi')),
+            'history_len': len(data.get('history') or []),
+        })
 
-    if not question:
+        question   = (data.get('question') or '').strip()
+        prediction = data.get('prediction')
+        rooftop    = data.get('rooftop')
+        roi        = data.get('roi')
+        history    = data.get('history') or []
+
+        if not question:
+            print("[helia] Empty question — returning 400")
+            return jsonify({
+                'answer': 'Please type a question so I can help you.',
+                'chunks': [],
+                'sources': [],
+            }), 400
+
+        chunks = knowledge_store.retrieve(question, top_k=3)
+        print(f"[helia] KB chunks retrieved: {len(chunks)}")
+
+        print("[helia] CALLING GEMINI")
+        answer = _gemini_answer(question, prediction, rooftop, roi, chunks, history)
+        print(f"[helia] GEMINI RESPONSE: {repr(answer[:120]) if answer else None}")
+
+        if answer is None:
+            print("[helia] Gemini returned None — using keyword fallback")
+            answer = _fallback_answer(question, prediction, roi, chunks)
+            print(f"[helia] FALLBACK ANSWER: {repr(answer[:120])}")
+
+        print(f"[helia] Returning answer ({len(answer)} chars)")
         return jsonify({
-            'answer': 'Please type a question so I can help you with solar predictions, ROI, or rooftop planning.',
-            'chunks': [],
-            'sources': []
-        }), 400
+            'answer':  answer,
+            'chunks':  chunks,
+            'sources': [f"{c['source']} (page {c['page']})" for c in chunks],
+        })
 
-    app.logger.info('User Message: %s', question)
-
-    chunks = knowledge_store.retrieve(question, top_k=4)
-    app.logger.info('Retrieved Chunks: %s', chunks)
-
-    answer, used_prediction, used_roi = compose_answer(question, prediction, roi, chunks)
-
-    response = {
-        'answer': answer,
-        'chunks': chunks,
-        'sources': [f"{chunk['source']} (page {chunk['page']})" for chunk in chunks],
-        'prediction': used_prediction,
-        'roi': used_roi
-    }
-    return jsonify(response)
-
-
-def safe_number(value, digits=1):
-    try:
-        return float(value)
-    except Exception:
-        return None
-
-
-def format_inr(value):
-    try:
-        amount = float(value)
-        return f"₹{amount:,.0f}"
-    except Exception:
-        return 'N/A'
-
-
-def derive_roi(prediction_data):
-    if not isinstance(prediction_data, dict):
-        return None
-    cap = safe_number(prediction_data.get('recommended_capacity'))
-    annual = safe_number(prediction_data.get('annual_projection'))
-    if not cap or not annual or annual <= 0:
-        return None
-    installation_cost = cap * 55000
-    annual_savings = annual * 7
-    lifetime_savings = annual_savings * 25
-    payback_period = installation_cost / annual_savings if annual_savings > 0 else None
-    roi_percentage = (annual_savings / installation_cost * 100) if installation_cost > 0 else None
-    break_even = f"in about {payback_period:.1f} years" if payback_period is not None else 'N/A'
-    return {
-        'installation_cost': installation_cost,
-        'annual_savings': annual_savings,
-        'lifetime_savings': lifetime_savings,
-        'payback_period': payback_period,
-        'roi_percentage': roi_percentage,
-        'break_even_date': break_even
-    }
-
-
-def compose_answer(question, prediction, roi, chunks):
-    text = question.lower()
-    greeting_keywords = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'how are you', 'how are you?']
-    if any(keyword in text for keyword in greeting_keywords):
-        return ("Hello! I'm Helia AI ☀️ I’m here to help you with solar prediction, ROI analysis, and rooftop solar planning. "
-                "What would you like to explore today?" , prediction, roi)
-
-    if 'thank' in text:
-        return ('You’re welcome! If you have more solar questions, I’m here to help. 😊', prediction, roi)
-
-    if any(keyword in text for keyword in ['bye', 'goodbye', 'see you']):
-        return ('Thank you for visiting Helia AI. Have a wonderful day and feel free to return anytime if you need solar guidance. ☀️', prediction, roi)
-
-    if any(keyword in text for keyword in ['show my prediction', 'prediction dashboard', 'view prediction', 'prediction page']):
-        return ('You can view your solar prediction here:\nPrediction Dashboard → /prediction', prediction, roi)
-
-    if any(keyword in text for keyword in ['show roi', 'roi dashboard', 'view roi', 'financial analysis']):
-        return ('You can review your financial analysis here:\nROI Dashboard → /roi', prediction, roi)
-
-    if any(keyword in text for keyword in ['show report', 'reports', 'report page', 'download report']):
-        return ('Your generated report is available in:\nReports → /reports', prediction, roi)
-
-    if any(keyword in text for keyword in ['explain my prediction', 'prediction result', 'solar prediction', 'annual generation', 'peak sun hours', 'recommended capacity', 'panel count', 'energy coverage']):
-        if prediction and isinstance(prediction, dict):
-            score = prediction.get('potential_score', 'N/A')
-            annual_projection = prediction.get('annual_projection', 'N/A')
-            peak = prediction.get('peak_sun_hours', 'N/A')
-            capacity = prediction.get('recommended_capacity', 'N/A')
-            panels = prediction.get('panel_count', 'N/A')
-            coverage = prediction.get('energy_coverage', 'N/A')
-            return (f"Based on your assessment:\n"
-                    f"• Solar Potential Score: {score}/100\n"
-                    f"• Annual Generation: {annual_projection} kWh\n"
-                    f"• Peak Sun Hours: {peak}\n"
-                    f"• Recommended Capacity: {capacity} kW\n"
-                    f"• Panel Count: {panels}\n"
-                    f"• Energy Coverage: {coverage}%\n\n"
-                    "Your location shows strong solar potential and is suitable for rooftop solar installation.", prediction, roi)
-        return ('I don\'t currently have enough information to explain your prediction accurately. Please generate a solar assessment first.', prediction, roi)
-
-    resolved_roi = roi if isinstance(roi, dict) else derive_roi(prediction)
-    if any(keyword in text for keyword in ['explain roi', 'why is my roi', 'payback period', 'annual savings', 'lifetime savings', 'break-even', 'installation cost']):
-        if resolved_roi and isinstance(resolved_roi, dict):
-            return (f"Your ROI is calculated based on annual savings compared to installation cost.\n\n"
-                    f"Installation Cost: {format_inr(resolved_roi.get('installation_cost'))}\n"
-                    f"Annual Savings: {format_inr(resolved_roi.get('annual_savings'))}\n"
-                    f"ROI Percentage: {resolved_roi.get('roi_percentage'):.1f}%\n"
-                    f"Payback Period: {resolved_roi.get('payback_period'):.1f} years\n"
-                    f"Lifetime Savings: {format_inr(resolved_roi.get('lifetime_savings'))}\n"
-                    f"Break-even Date: {resolved_roi.get('break_even_date')}\n\n"
-                    "This investment is expected to recover in around "
-                    f"{resolved_roi.get('payback_period'):.1f} years.", prediction, resolved_roi)
-        return ('I don\'t currently have enough information to answer that accurately. Please generate a solar assessment first.', prediction, roi)
-
-    if chunks:
-        snippet_lines = []
-        for chunk in chunks[:3]:
-            snippet = chunk.get('chunk', '').strip()
-            if snippet:
-                snippet_lines.append(snippet)
-        joined = '\n\n'.join(snippet_lines)
-        base = 'I found this information in the Helia Doc knowledge base:'
-        return (f"{base}\n\n{joined}", prediction, roi)
-
-    return ('I don\'t currently have enough information to answer that accurately. Please generate a solar assessment first.', prediction, roi)
+    except Exception as e:
+        import traceback
+        print("[helia] UNHANDLED EXCEPTION in /chat-query:")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error':   str(e),
+            'answer':  'An internal error occurred. Check the server logs.',
+            'chunks':  [],
+            'sources': [],
+        }), 500
 
 # ==========================
 # START SERVER

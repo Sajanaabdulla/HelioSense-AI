@@ -6,12 +6,14 @@
 # =============================================================================
 
 import os
+import logging
 import warnings
 import numpy as np
 import joblib
 from datetime import datetime
 
 warnings.filterwarnings("ignore")
+logger = logging.getLogger(__name__)
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
@@ -127,24 +129,32 @@ def _classify_suitability(score):
 
 # ── Main public API ────────────────────────────────────────────────────────────
 def predict(
-    latitude:    float,
-    longitude:   float,
-    temperature: float,
-    humidity:    float,
-    wind_speed:  float,
-    date:        datetime | None = None,
+    latitude:        float,
+    longitude:       float,
+    temperature:     float,
+    humidity:        float,
+    wind_speed:      float,
+    date:            datetime | None = None,
+    cloud_cover_pct: float | None = None,
 ) -> dict:
     """
     Predict all solar metrics for a given location and current weather.
 
     Parameters
     ----------
-    latitude    : float  — decimal degrees
-    longitude   : float  — decimal degrees
-    temperature : float  — °C
-    humidity    : float  — % (0–100)
-    wind_speed  : float  — m/s
-    date        : datetime (optional) — defaults to today
+    latitude        : float  — decimal degrees
+    longitude       : float  — decimal degrees
+    temperature     : float  — °C
+    humidity        : float  — % (0–100)
+    wind_speed      : float  — m/s
+    date            : datetime (optional) — defaults to today
+    cloud_cover_pct : float (optional) — cloud cover 0–100 from OWM clouds.all.
+                      When provided, a Kasten–Young (1989) empirical cloud-
+                      attenuation correction is applied post-prediction.
+                      This is more reliable than the humidity-derived proxy
+                      used internally when this value is absent, but still an
+                      approximation — actual pyranometer measurements would be
+                      needed for survey-grade irradiance values.
 
     Returns
     -------
@@ -164,6 +174,23 @@ def predict(
         latitude, longitude, year, month, day,
         temperature, humidity, wind_speed
     )
+
+    # ── Cloud-cover correction (Kasten & Young 1989) ──────────────────────────
+    # Kt = 1 − 0.75 × (c/100)^3.4  where c is cloud cover in percent.
+    # Applied after the model prediction because cloud_cover_pct was not a
+    # training feature — modifying the raw output is safer than adding a
+    # correlated feature the model was never calibrated for.
+    # Representative values: c=0 → Kt=1.00, c=50 → Kt≈0.82, c=100 → Kt=0.25.
+    cloud_correction_factor = None
+    if cloud_cover_pct is not None:
+        c  = float(np.clip(cloud_cover_pct, 0.0, 100.0))
+        Kt = float(np.clip(1.0 - 0.75 * (c / 100.0) ** 3.4, 0.10, 1.0))
+        irradiance = irradiance * Kt
+        cloud_correction_factor = round(Kt, 4)
+        logger.debug(
+            'predict: cloud correction Kt=%.4f applied (cloud_cover_pct=%.1f)',
+            Kt, c,
+        )
 
     # ── Derived KPIs ──────────────────────────────────────────────────────────
     peak_sun_hours = round(irradiance, 2)                            # numerically equal by definition
@@ -238,14 +265,16 @@ def predict(
         "suitability"           : suitability,
         "recommendation"        : recommendation,
 
-        # Echo inputs
+        # Echo inputs and any post-model corrections applied
         "inputs": {
-            "latitude"    : latitude,
-            "longitude"   : longitude,
-            "temperature" : temperature,
-            "humidity"    : humidity,
-            "wind_speed"  : wind_speed,
-            "date"        : date.strftime("%Y-%m-%d"),
+            "latitude"                : latitude,
+            "longitude"               : longitude,
+            "temperature"             : temperature,
+            "humidity"                : humidity,
+            "wind_speed"              : wind_speed,
+            "date"                    : date.strftime("%Y-%m-%d"),
+            "cloud_cover_pct"         : cloud_cover_pct,
+            "cloud_correction_factor" : cloud_correction_factor,
         }
     }
 
