@@ -17,8 +17,13 @@ YOLO_MODEL_PATH = os.path.abspath(
 # Coverage: fraction of image that the largest contour fills.
 # < MIN  → too small to be a real rooftop (random object, vehicle, small detail)
 # > MAX  → image IS the document — a bill or screenshot fills ~100% of frame
+# NOTE: coverage_high is further gated by YOLO: if YOLO fires (yolo_raw_boxes > 0)
+# the image is confirmed as a valid rooftop and the max-coverage check is bypassed
+# regardless of this threshold.  Raised from 0.94 → 0.97 so that close-overhead
+# satellite shots where the roof fills nearly the whole frame still pass when YOLO
+# is unavailable; Gate 4 (colour/texture) remains the primary document detector.
 MIN_ROOF_COVERAGE = 0.08
-MAX_ROOF_COVERAGE = 0.94
+MAX_ROOF_COVERAGE = 0.97
 
 # Solidity = contour area / convex-hull area.
 # Rooftops are roughly convex (0.65–0.95); vegetation and torn/irregular edges
@@ -29,12 +34,18 @@ MIN_SOLIDITY = 0.50
 # Rooftops are compact; values above ~7 indicate a road, field edge, or portrait.
 MAX_ASPECT_RATIO = 7.0
 
-# Document/bill/screenshot detection.
-# A white page with dark text has: very high brightness, near-grey colour,
-# high local contrast (std dev).  All three must be true to trigger rejection.
-DOC_BRIGHTNESS_MIN  = 205   # mean V channel (0-255) above this → bright background
-DOC_SATURATION_MAX  = 22    # mean S channel below this → near-grey (paper/UI)
-DOC_GRAY_STD_MIN    = 65    # std dev of grayscale → high = text contrast
+# Document/bill/form detection — per-pixel fraction approach.
+# DOC_BRIGHTNESS_MIN and DOC_SATURATION_MAX are now per-pixel thresholds, not
+# means.  Using per-pixel fractions (rather than mean values) makes the check
+# robust to mixed images: a Google Maps / Google Earth satellite screenshot has
+# colourful aerial tiles surrounding the rooftop, so the bright+grey FRACTION
+# stays low and the hue-diversity count stays high → not rejected.
+# All three conditions must be true simultaneously to trigger rejection.
+DOC_BRIGHTNESS_MIN  = 205   # per-pixel: V channel above this → "bright" pixel
+DOC_SATURATION_MAX  = 22    # per-pixel: S channel below this → "grey" pixel
+DOC_GRAY_STD_MIN    = 65    # std dev of ROI greyscale → high = text-like contrast
+DOC_PIXEL_FRAC_MIN  = 0.55  # >55% of ROI pixels must be bright+grey to reject
+DOC_HUE_BINS_MAX    = 6     # occupied 10°-hue bins (among sat>15 px): docs ≤5, aerial ≥6
 
 # Vegetation detection.
 # Green hue in OpenCV HSV occupies roughly 35-85 / 180.  If more than half the
@@ -179,10 +190,12 @@ def _classify_region(bgr, mask):
 
     Checks
     ------
-    Document / bill / screenshot
-        White background + near-grey colour + high text-contrast.
-        All three conditions must be true simultaneously to avoid rejecting
-        pale concrete or metal rooftops (which share some but not all traits).
+    Document / bill / form
+        More than 55% of masked pixels are individually bright+grey (V>205,
+        S<22), fewer than 6 distinct hue bins exist among saturated pixels,
+        and overall contrast is high (text edges).  Google Maps / Google Earth
+        satellite screenshots have 8–15+ distinct hue bins even when the
+        rooftop is pale, so they are not rejected by this gate.
 
     Vegetation
         Predominantly green-hued pixels (HSV hue 35–85 out of 180, with
@@ -192,7 +205,7 @@ def _classify_region(bgr, mask):
     """
     roi_count = int(np.sum(mask > 0))
     if roi_count < 100:
-        return None   # mask too sparse to classify — let geometry gates decide
+        return None, {}   # mask too sparse to classify — let geometry gates decide
 
     hsv  = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
@@ -200,48 +213,78 @@ def _classify_region(bgr, mask):
     roi_hsv  = hsv[mask > 0]    # shape (N, 3)
     roi_gray = gray[mask > 0]   # shape (N,)
 
-    mean_brightness = float(np.mean(roi_hsv[:, 2]))
-    mean_saturation = float(np.mean(roi_hsv[:, 1]))
-    gray_contrast   = float(np.std(roi_gray))
+    gray_contrast = float(np.std(roi_gray))
 
-    # ── Document / bill / screenshot ─────────────────────────────────────────
-    # All three must be true: bright + grey + high-contrast (from text / UI lines)
+    # ── Document / bill / form ────────────────────────────────────────────────
+    bright_grey_mask = (
+        (roi_hsv[:, 2] > DOC_BRIGHTNESS_MIN) &
+        (roi_hsv[:, 1] < DOC_SATURATION_MAX)
+    )
+    bright_grey_frac = float(np.sum(bright_grey_mask)) / roi_count
+
+    sat_pixels    = roi_hsv[roi_hsv[:, 1] > 15]
+    hue_bins_used = int(len(np.unique(sat_pixels[:, 0] // 10))) if len(sat_pixels) > 0 else 0
+
+    # ── Vegetation (computed early so it's always in the debug dict) ─────────
+    green_px   = int(np.sum(
+        (roi_hsv[:, 0] >= 35) & (roi_hsv[:, 0] <= 85) & (roi_hsv[:, 1] > 50)
+    ))
+    green_frac = green_px / roi_count
+
+    # Collect all colour diagnostics in one place so every return path has them.
+    colour_dbg = {
+        'bright_grey_frac':   round(bright_grey_frac, 3),
+        'hue_bins_used':      hue_bins_used,
+        'gray_contrast':      round(gray_contrast, 1),
+        'green_frac':         round(green_frac, 3),
+        'thresholds': {
+            'doc_pixel_frac_min': DOC_PIXEL_FRAC_MIN,
+            'doc_hue_bins_max':   DOC_HUE_BINS_MAX,
+            'doc_gray_std_min':   DOC_GRAY_STD_MIN,
+            'green_fraction_max': GREEN_FRACTION_MAX,
+        },
+    }
+    print(
+        f"[rooftop] COLOUR-DEBUG"
+        f" | bright_grey_frac={bright_grey_frac:.3f} (need >{DOC_PIXEL_FRAC_MIN} → {'OVER' if bright_grey_frac > DOC_PIXEL_FRAC_MIN else 'ok'})"
+        f" | hue_bins={hue_bins_used} (need <{DOC_HUE_BINS_MAX} → {'UNDER' if hue_bins_used < DOC_HUE_BINS_MAX else 'ok'})"
+        f" | contrast={gray_contrast:.1f} (need >{DOC_GRAY_STD_MIN} → {'OVER' if gray_contrast > DOC_GRAY_STD_MIN else 'ok'})"
+        f" | green_frac={green_frac:.3f} (need <{GREEN_FRACTION_MAX})"
+    )
+
     is_doc = (
-        mean_brightness > DOC_BRIGHTNESS_MIN and
-        mean_saturation < DOC_SATURATION_MAX and
-        gray_contrast   > DOC_GRAY_STD_MIN
+        bright_grey_frac > DOC_PIXEL_FRAC_MIN and
+        hue_bins_used    < DOC_HUE_BINS_MAX   and
+        gray_contrast    > DOC_GRAY_STD_MIN
     )
     if is_doc:
         logger.info(
             '[rooftop] colour check: document detected '
-            '(brightness=%.0f, sat=%.0f, contrast=%.0f)',
-            mean_brightness, mean_saturation, gray_contrast,
+            '(bright_grey_frac=%.2f, hue_bins=%d, contrast=%.0f)',
+            bright_grey_frac, hue_bins_used, gray_contrast,
         )
         return (
-            'Image appears to be a document, bill, or screenshot — not a rooftop '
-            'photograph. Please upload a satellite or aerial image of a building rooftop.'
+            'Image appears to be a document, bill, or form — not a rooftop photograph. '
+            'Please upload a satellite or aerial image of a building rooftop.',
+            colour_dbg,
         )
 
-    # ── Vegetation ───────────────────────────────────────────────────────────
-    green_px    = int(np.sum(
-        (roi_hsv[:, 0] >= 35) & (roi_hsv[:, 0] <= 85) & (roi_hsv[:, 1] > 50)
-    ))
-    green_frac  = green_px / roi_count
     if green_frac > GREEN_FRACTION_MAX:
         logger.info(
             '[rooftop] colour check: vegetation detected (green_frac=%.2f)', green_frac
         )
         return (
             f'Image shows predominantly vegetation ({green_frac * 100:.0f}% green pixels). '
-            'Please upload a clear overhead view of a building rooftop.'
+            'Please upload a clear overhead view of a building rooftop.',
+            colour_dbg,
         )
 
     logger.debug(
         '[rooftop] colour check passed '
-        '(brightness=%.0f, sat=%.0f, contrast=%.0f, green=%.2f)',
-        mean_brightness, mean_saturation, gray_contrast, green_frac,
+        '(bright_grey_frac=%.2f, hue_bins=%d, contrast=%.0f, green_frac=%.2f)',
+        bright_grey_frac, hue_bins_used, gray_contrast, green_frac,
     )
-    return None   # region looks like a plausible rooftop
+    return None, colour_dbg   # region looks like a plausible rooftop
 
 
 def _detect_obstructions_yolo(bgr):
@@ -634,7 +677,12 @@ def _detect_horizon_lines(bgr, h, w):
 
 
 def _validate_perspective(bgr, h, w, roof_coverage, sky_ratio):
-    """Full perspective classification after contour detection.
+    """Classify perspective signals for logging and soft rejection scoring.
+
+    This function is informational only — it does NOT make the accept/reject
+    decision.  The caller applies multi-indicator logic to decide whether the
+    image should be rejected.  A single signal (high horizon_lines, side_view
+    label) is never sufficient on its own to reject a valid rooftop image.
 
     Parameters
     ----------
@@ -645,25 +693,25 @@ def _validate_perspective(bgr, h, w, roof_coverage, sky_ratio):
 
     Returns
     -------
-    dict with keys: accepted (bool), sky_ratio, roof_ratio, horizon_lines,
-    perspective ('top_view' | 'side_view').
+    dict with keys: sky_ratio, roof_ratio, horizon_lines,
+    perspective ('top_view' | 'side_view'), sky_high (bool), roof_low (bool).
     """
     horizon_lines = _detect_horizon_lines(bgr, h, w)
 
-    is_side_view = False
-    if sky_ratio > SKY_RATIO_MAX:
-        is_side_view = True
-    elif roof_coverage < MIN_ROOF_RATIO_VIEW:
-        is_side_view = True
-    elif horizon_lines >= HORIZON_LINE_MIN_COUNT and sky_ratio > HORIZON_SKY_COMBO_THR:
-        is_side_view = True
+    sky_high       = sky_ratio     > SKY_RATIO_MAX
+    roof_low       = roof_coverage < MIN_ROOF_RATIO_VIEW
+    horizon_strong = horizon_lines >= HORIZON_LINE_MIN_COUNT and sky_ratio > HORIZON_SKY_COMBO_THR
+
+    is_side_view = sky_high or roof_low or horizon_strong
 
     return {
-        'accepted':      not is_side_view,
-        'sky_ratio':     round(sky_ratio, 4),
-        'roof_ratio':    round(roof_coverage, 4),
-        'horizon_lines': horizon_lines,
-        'perspective':   'side_view' if is_side_view else 'top_view',
+        'sky_ratio':      round(sky_ratio, 4),
+        'roof_ratio':     round(roof_coverage, 4),
+        'horizon_lines':  horizon_lines,
+        'perspective':    'side_view' if is_side_view else 'top_view',
+        'sky_high':       sky_high,
+        'roof_low':       roof_low,
+        'horizon_strong': horizon_strong,
     }
 
 
@@ -713,17 +761,13 @@ def analyze_rooftop(file_storage):
     h, w = bgr.shape[:2]
     logger.info('[rooftop] received image %dx%d px', w, h)
 
-    # ── Perspective pre-screen: sky colour check (fast — runs before YOLO) ────
-    # Satellite and drone top-view images contain essentially no sky pixels.
-    # Side-view / street-level photos typically show 25–70% sky.  Rejecting
-    # here avoids wasting YOLO inference on obviously invalid inputs.
+    # ── Sky ratio measurement (perspective soft-signal — not a rejection gate) ──
+    # Computed early so it is available for both the perspective classifier and
+    # the multi-indicator check later.  Sky ratio alone is NOT sufficient to
+    # reject an image; the full multi-indicator logic runs after contour detection.
     sky_ratio = _compute_sky_ratio(bgr, h, w)
-    if sky_ratio > SKY_RATIO_MAX:
-        logger.info('[validation] sky_ratio=%.4f', sky_ratio)
-        logger.info('[validation] roof_ratio=N/A')
-        logger.info('[validation] perspective=side_view')
-        logger.info('[validation] rejected')
-        return {'success': False, 'error': PERSPECTIVE_REJECT_MSG, 'confidence': 0}
+    logger.info('[rooftop] sky_ratio=%.4f', sky_ratio)
+    print(f"[rooftop] sky_ratio={sky_ratio:.4f}")
 
     # ── Gate 1 & YOLO: run both in parallel (YOLO first so its result informs
     #    threshold tightening but does not block the geometry checks) ──────────
@@ -733,6 +777,15 @@ def analyze_rooftop(file_storage):
     roof_px  = int(np.sum(mask > 0))
     coverage = roof_px / (h * w)
 
+    print(
+        f"[rooftop] GATE-1"
+        f" | contour_found={contour_found}"
+        f" | coverage={coverage:.4f} ({coverage*100:.1f}%)"
+        f" | solidity={solidity:.3f}"
+        f" | aspect_ratio={aspect_ratio:.2f}"
+        f" | yolo_available={yolo_available}"
+        f" | yolo_raw_boxes={len(all_boxes)}"
+    )
     logger.info(
         '[rooftop] contour=%s, coverage=%.1f%%, solidity=%.2f, aspect=%.2f, '
         'yolo_available=%s, yolo_raw=%d',
@@ -743,6 +796,7 @@ def analyze_rooftop(file_storage):
     # ── Gate 1: contour found ─────────────────────────────────────────────────
     if not contour_found:
         logger.info('[rooftop] rejected — no roof contour')
+        print("[rooftop] REJECTED — gate 1: no contour found")
         return {
             'success': False,
             'error': (
@@ -750,28 +804,74 @@ def analyze_rooftop(file_storage):
                 'image of a building rooftop.'
             ),
             'confidence': 0,
+            'debug': {'gate': 1, 'gate_name': 'contour', 'contour_found': False},
         }
 
-    # ── Perspective gate: roof coverage ratio + horizon line check ─────────────
-    # Full classification now that we know the roof mask coverage fraction.
-    # Reuses the sky_ratio already computed in the pre-screen above.
+    # ── Perspective analysis (soft signal — multi-indicator gate) ────────────────
+    # Perspective is never a hard rejection on its own.  We reject only when
+    # sky_ratio is high AND roof_ratio is low AND the classifier says side_view.
+    # A high roof_ratio (> 0.50) means the roof fills the frame — always accept.
     persp = _validate_perspective(bgr, h, w, coverage, sky_ratio)
-    logger.info('[validation] sky_ratio=%.4f', persp['sky_ratio'])
-    logger.info('[validation] roof_ratio=%.4f', persp['roof_ratio'])
-    logger.info('[validation] perspective=%s', persp['perspective'])
-    if not persp['accepted']:
-        logger.info('[validation] rejected')
-        return {'success': False, 'error': PERSPECTIVE_REJECT_MSG, 'confidence': 0}
-    logger.info('[validation] accepted')
+    logger.info('[rooftop] perspective=%s',  persp['perspective'])
+    logger.info('[rooftop] roof_ratio=%.4f', persp['roof_ratio'])
+    logger.info('[rooftop] sky_ratio=%.4f',  persp['sky_ratio'])
+    print(f"[rooftop] perspective={persp['perspective']}")
+    print(f"[rooftop] roof_ratio={persp['roof_ratio']}")
+    print(f"[rooftop] sky_ratio={persp['sky_ratio']}")
+
+    _roof_high = persp['roof_ratio'] > 0.50
+
+    if _roof_high:
+        # Roof fills more than half the frame — clearly overhead; always accept.
+        acceptance_reason = f"accepted_high_roof_ratio={persp['roof_ratio']:.2f}"
+    elif persp['sky_high'] and persp['roof_low'] and persp['perspective'] == 'side_view':
+        # All three indicators agree this is a non-overhead image — reject.
+        acceptance_reason = 'rejected_multi_indicator'
+    else:
+        # One or two soft signals — not enough to reject.
+        acceptance_reason = (
+            f"accepted_soft_signals_only"
+            f" (sky_high={persp['sky_high']}, roof_low={persp['roof_low']},"
+            f" perspective={persp['perspective']})"
+        )
+
+    logger.info('[rooftop] final_acceptance_reason=%s', acceptance_reason)
+    print(f"[rooftop] final_acceptance_reason={acceptance_reason}")
+
+    if acceptance_reason == 'rejected_multi_indicator':
+        return {
+            'success': False,
+            'error': PERSPECTIVE_REJECT_MSG,
+            'confidence': 0,
+            'debug': {
+                'gate': 'perspective',
+                'sky_ratio': persp['sky_ratio'],
+                'roof_ratio': persp['roof_ratio'],
+                'horizon_lines': persp['horizon_lines'],
+                'perspective': persp['perspective'],
+                'thresholds': {
+                    'sky_ratio_max': SKY_RATIO_MAX,
+                    'min_roof_ratio_view': MIN_ROOF_RATIO_VIEW,
+                },
+            },
+        }
 
     # ── Gate 2: coverage bounds ───────────────────────────────────────────────
     # Tighten the lower bound when YOLO is unavailable — without AI validation
     # we need a stronger geometric signal.
     min_cov = MIN_ROOF_COVERAGE if yolo_available else max(MIN_ROOF_COVERAGE, 0.10)
 
+    print(
+        f"[rooftop] GATE-2 coverage"
+        f" | coverage={coverage:.4f} ({coverage*100:.1f}%)"
+        f" | min_cov={min_cov:.4f} ({min_cov*100:.1f}%)"
+        f" | max_cov={MAX_ROOF_COVERAGE}"
+    )
+
     if coverage < min_cov:
         logger.info('[rooftop] rejected — coverage %.1f%% < min %.1f%%',
                     coverage * 100, min_cov * 100)
+        print(f"[rooftop] REJECTED — gate 2: coverage {coverage*100:.1f}% < min {min_cov*100:.1f}%")
         return {
             'success': False,
             'error': (
@@ -779,26 +879,68 @@ def analyze_rooftop(file_storage):
                 'Upload a closer overhead view so the rooftop fills more of the frame.'
             ),
             'confidence': 0,
+            'debug': {
+                'gate': 2,
+                'gate_name': 'coverage_low',
+                'coverage': round(coverage, 4),
+                'min_cov': round(min_cov, 4),
+            },
         }
 
     if coverage > MAX_ROOF_COVERAGE:
-        logger.info('[rooftop] rejected — coverage %.1f%% exceeds max %.1f%% (document/screenshot)',
-                    coverage * 100, MAX_ROOF_COVERAGE * 100)
-        return {
-            'success': False,
-            'error': (
-                'Image appears to be a document, screenshot, or extreme close-up '
-                f'({coverage * 100:.0f}% of the frame is a single flat region). '
-                'Please upload a satellite or aerial rooftop photograph.'
-            ),
-            'confidence': 0,
-        }
+        if len(all_boxes) > 0:
+            # YOLO detected rooftop features — this is a valid close-overhead image.
+            # A close-up satellite or drone shot can legitimately fill the whole
+            # frame with roof surface; YOLO confirmation overrides the max-coverage
+            # threshold.  Gate 4 (colour/texture) remains as the document fallback.
+            logger.info(
+                '[rooftop] coverage_high bypassed — YOLO confirmed %d detection(s) '
+                '(coverage=%.1f%% > max=%.0f%%)',
+                len(all_boxes), coverage * 100, MAX_ROOF_COVERAGE * 100,
+            )
+            print(
+                f"[rooftop] coverage_high bypassed by YOLO"
+                f" | yolo_boxes={len(all_boxes)}"
+                f" | coverage={coverage*100:.1f}% > max={MAX_ROOF_COVERAGE*100:.0f}%"
+            )
+        else:
+            logger.info(
+                '[rooftop] rejected — coverage %.1f%% exceeds max %.1f%% and no YOLO detections',
+                coverage * 100, MAX_ROOF_COVERAGE * 100,
+            )
+            print(
+                f"[rooftop] REJECTED — gate 2: coverage {coverage*100:.1f}%"
+                f" > max {MAX_ROOF_COVERAGE*100:.0f}% (no YOLO detections)"
+            )
+            return {
+                'success': False,
+                'error': (
+                    'Image appears to be a document, screenshot, or extreme close-up '
+                    f'({coverage * 100:.0f}% of the frame is a single flat region). '
+                    'Please upload a satellite or aerial rooftop photograph.'
+                ),
+                'confidence': 0,
+                'debug': {
+                    'gate': 2,
+                    'gate_name': 'coverage_high',
+                    'coverage': round(coverage, 4),
+                    'max_cov': MAX_ROOF_COVERAGE,
+                    'yolo_boxes': len(all_boxes),
+                },
+            }
 
     # ── Gate 3: geometry quality ──────────────────────────────────────────────
     min_sol = MIN_SOLIDITY if yolo_available else max(MIN_SOLIDITY, 0.55)
 
+    print(
+        f"[rooftop] GATE-3 geometry"
+        f" | solidity={solidity:.3f} (min={min_sol:.3f})"
+        f" | aspect_ratio={aspect_ratio:.2f} (max={MAX_ASPECT_RATIO})"
+    )
+
     if solidity < min_sol:
         logger.info('[rooftop] rejected — solidity %.2f < min %.2f', solidity, min_sol)
+        print(f"[rooftop] REJECTED — gate 3: solidity {solidity:.3f} < min {min_sol:.3f}")
         return {
             'success': False,
             'error': (
@@ -807,11 +949,18 @@ def analyze_rooftop(file_storage):
                 'This may be a tree canopy, vehicle, or non-overhead photograph.'
             ),
             'confidence': 0,
+            'debug': {
+                'gate': 3,
+                'gate_name': 'solidity',
+                'solidity': round(solidity, 3),
+                'min_sol': round(min_sol, 3),
+            },
         }
 
     if aspect_ratio > MAX_ASPECT_RATIO:
         logger.info('[rooftop] rejected — aspect ratio %.1f > max %.1f',
                     aspect_ratio, MAX_ASPECT_RATIO)
+        print(f"[rooftop] REJECTED — gate 3: aspect_ratio {aspect_ratio:.2f} > max {MAX_ASPECT_RATIO}")
         return {
             'success': False,
             'error': (
@@ -820,12 +969,25 @@ def analyze_rooftop(file_storage):
                 'Please upload a direct overhead view of a building.'
             ),
             'confidence': 0,
+            'debug': {
+                'gate': 3,
+                'gate_name': 'aspect_ratio',
+                'aspect_ratio': round(aspect_ratio, 2),
+                'max_aspect': MAX_ASPECT_RATIO,
+            },
         }
 
     # ── Gate 4: colour / texture ──────────────────────────────────────────────
-    colour_rejection = _classify_region(bgr, mask)
+    colour_rejection, colour_dbg = _classify_region(bgr, mask)
+    print(f"[rooftop] GATE-4 colour | rejection={colour_rejection!r} | dbg={colour_dbg}")
     if colour_rejection:
-        return {'success': False, 'error': colour_rejection, 'confidence': 0}
+        print(f"[rooftop] REJECTED — gate 4 colour")
+        return {
+            'success': False,
+            'error': colour_rejection,
+            'confidence': 0,
+            'debug': {'gate': 4, 'gate_name': 'colour', **colour_dbg},
+        }
 
     # ── Gate 5: YOLO mask-overlap filter ─────────────────────────────────────
     # Discard detections whose pixel footprint does not meaningfully overlap the

@@ -6,6 +6,7 @@
 # =============================================================================
 
 import os
+import math
 import logging
 import warnings
 import numpy as np
@@ -100,6 +101,12 @@ def _estimate_cloud_coverage(humidity, irradiance, max_irradiance=IRRADIANCE_MAX
 def _predict_irradiance(lat, lon, year, month, day, temperature, humidity, wind_speed):
     X    = _build_features(lat, lon, year, month, day, temperature, humidity, wind_speed)
     pred = float(_model.predict(X)[0])
+    if not math.isfinite(pred):
+        logger.warning(
+            'model returned non-finite value %r (lat=%s lon=%s month=%s) — clamping to 0.0',
+            pred, lat, lon, month,
+        )
+        return 0.0
     return max(0.0, pred)
 
 # ── Confidence score ───────────────────────────────────────────────────────────
@@ -174,17 +181,24 @@ def predict(
         latitude, longitude, year, month, day,
         temperature, humidity, wind_speed
     )
+    raw_irradiance = irradiance   # save RF output before any post-model correction
 
-    # ── Cloud-cover correction (Kasten & Young 1989) ──────────────────────────
-    # Kt = 1 − 0.75 × (c/100)^3.4  where c is cloud cover in percent.
-    # Applied after the model prediction because cloud_cover_pct was not a
-    # training feature — modifying the raw output is safer than adding a
-    # correlated feature the model was never calibrated for.
-    # Representative values: c=0 → Kt=1.00, c=50 → Kt≈0.82, c=100 → Kt=0.25.
+    # ── Cloud-cover correction ────────────────────────────────────────────────
+    # The RF model was trained on historical irradiance that already includes
+    # all weather states (humidity is a training feature and acts as a cloudiness
+    # proxy for India). Applying the Kasten-Young instantaneous formula to a
+    # daily-average model prediction double-counts cloud effects: at 100% OWM
+    # cloud cover the original formula produced Kt=0.25, reducing a correct
+    # 4.86 kWh/m²/day prediction to 1.21 — physically wrong for a daily average.
+    #
+    # The correction is now capped so that even a fully overcast report can reduce
+    # the daily average by at most 30 % (Kt_min=0.70), which is consistent with
+    # real NSRDB/Solargis data for tropical overcast days vs clear-sky days.
     cloud_correction_factor = None
     if cloud_cover_pct is not None:
         c  = float(np.clip(cloud_cover_pct, 0.0, 100.0))
-        Kt = float(np.clip(1.0 - 0.75 * (c / 100.0) ** 3.4, 0.10, 1.0))
+        # Gentle linear scale: 0 % cloud → Kt=1.00, 100 % cloud → Kt=0.70
+        Kt = float(np.clip(1.0 - 0.30 * (c / 100.0), 0.70, 1.0))
         irradiance = irradiance * Kt
         cloud_correction_factor = round(Kt, 4)
         logger.debug(
@@ -192,11 +206,37 @@ def predict(
             Kt, c,
         )
 
+    # Guard: irradiance must be finite before any derived calculation.
+    if not math.isfinite(irradiance):
+        logger.warning(
+            'predict: irradiance is %r after all corrections — clamping to 0.0', irradiance
+        )
+        irradiance = 0.0
+
+    # ── Step trace — printed on every call so the drop is visible in the terminal
+    print(
+        f"[predict] STEP-TRACE"
+        f" | lat={latitude} lon={longitude}"
+        f" | raw_RF={raw_irradiance:.4f}"
+        f" | cloud_cover_pct={cloud_cover_pct}"
+        f" | Kt={cloud_correction_factor}"
+        f" | final_irradiance={irradiance:.4f}"
+    )
+
     # ── Derived KPIs ──────────────────────────────────────────────────────────
-    peak_sun_hours = round(irradiance, 2)                            # numerically equal by definition
+    # peak_sun_hours IS irradiance — there is no separate formula.
+    # Any cloud correction applied above flows directly into peak_sun_hours.
+    peak_sun_hours = round(irradiance, 2)
 
     # Solar Potential Score (0–100)
     potential_score = round(min(100.0, (irradiance / IRRADIANCE_MAX) * 100), 1)
+
+    print(
+        f"[predict] STEP-TRACE"
+        f" | peak_sun_hours={peak_sun_hours}"
+        f" | potential_score={potential_score}"
+        f" | (IRRADIANCE_MAX used={IRRADIANCE_MAX})"
+    )
 
     # Recommended capacity (kW) — sized to cover avg daily demand
     # E = Capacity_kW × PSH × system_losses
@@ -248,6 +288,7 @@ def predict(
     return {
         # Core metrics
         "predicted_irradiance"  : round(irradiance, 4),
+        "raw_model_prediction"  : round(raw_irradiance, 4),  # RF output before cloud correction
         "potential_score"       : round(potential_score, 1),
         "peak_sun_hours"        : peak_sun_hours,
         "annual_projection"     : annual_projection,
@@ -279,14 +320,59 @@ def predict(
     }
 
 
-# ── CLI quick-test ─────────────────────────────────────────────────────────────
+# ── CLI diagnostic ────────────────────────────────────────────────────────────
+# Run:  python Backend/predict.py
+# Shows step-by-step values for three Kerala cities at three cloud-cover levels.
 if __name__ == "__main__":
-    import json
-    result = predict(
-        latitude    = 9.93,
-        longitude   = 76.26,
-        temperature = 28.0,
-        humidity    = 85.0,
-        wind_speed  = 3.0,
-    )
-    print(json.dumps(result, indent=2))
+    import logging as _logging
+    _logging.basicConfig(level=_logging.WARNING)
+
+    CITIES = [
+        # name                    lat     lon    temp   hum   ws
+        ("Kollam",               8.88,  76.60,  31.0,  85.0, 3.0),
+        ("Kozhikode",           11.25,  75.78,  30.0,  80.0, 4.0),
+        ("Thiruvananthapuram",   8.52,  76.94,  31.0,  83.0, 3.5),
+    ]
+
+    CLOUD_LEVELS = [
+        ("no cloud data (cloud_cover_pct=None)",  None),
+        ("cloud 0 % (clear sky)",                  0.0),
+        ("cloud 50 % (partly cloudy)",            50.0),
+        ("cloud 75 % (monsoon typical)",          75.0),
+        ("cloud 100 % (fully overcast)",         100.0),
+    ]
+
+    SEP = "-" * 78
+
+    for cloud_label, cloud_pct in CLOUD_LEVELS:
+        print(f"\n{'='*78}")
+        print(f"  {cloud_label}")
+        print(f"{'='*78}")
+        print(f"  {'City':<26} {'raw_RF':>8} {'Kt':>6} {'final_irr':>10} {'PSH':>6} {'score':>6}")
+        print(SEP)
+
+        for name, lat, lon, temp, hum, ws in CITIES:
+            r = predict(
+                latitude        = lat,
+                longitude       = lon,
+                temperature     = temp,
+                humidity        = hum,
+                wind_speed      = ws,
+                cloud_cover_pct = cloud_pct,
+            )
+            raw   = r["raw_model_prediction"]
+            Kt    = r["inputs"]["cloud_correction_factor"]
+            final = r["predicted_irradiance"]
+            psh   = r["peak_sun_hours"]
+            score = r["potential_score"]
+            kt_str = f"{Kt:.4f}" if Kt is not None else "  N/A"
+            print(f"  {name:<26} {raw:>8.4f} {kt_str:>6} {final:>10.4f} {psh:>6.2f} {score:>6.1f}")
+
+    print(f"\n{SEP}")
+    print("  KEY FORMULA:")
+    print("    Kt (cloud correction) = clip(1 - 0.30 * (cloud_pct/100),  min=0.70, max=1.0)")
+    print("    final_irradiance      = raw_RF * Kt")
+    print("    peak_sun_hours        = round(final_irradiance, 2)   <-- same number, no separate formula")
+    print("    potential_score       = round(min(100, final_irradiance / 8.0 * 100), 1)")
+    print(f"    IRRADIANCE_MAX used   = {IRRADIANCE_MAX}  kWh/m²/day")
+    print(SEP)

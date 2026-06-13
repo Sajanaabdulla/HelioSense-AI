@@ -1,15 +1,25 @@
 from flask import Flask, send_from_directory, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
-import os
 import re
 import pytesseract
 from PIL import Image
 
 from predict import predict
 from knowledge import knowledge_store
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+print("ENV KEY =", os.getenv("GEMINI_API_KEY"))
+
+
+print("RUNNING FILE =", os.path.abspath(__file__))
 
 # Use TESSERACT_CMD env var on Linux/Render; fall back to system PATH default
+import pytesseract
+
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
 
 app = Flask(__name__)
@@ -18,17 +28,29 @@ CORS(app)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
 
-# Startup diagnostics — visible in Render/gunicorn logs immediately
+# ── Startup diagnostics ───────────────────────────────────────────────────────
 _gemini_key_present = bool(os.environ.get("GEMINI_API_KEY", "").strip())
-print(f"[helia] GEMINI_API_KEY found: {_gemini_key_present}")
-if not _gemini_key_present:
-    print("[helia] WARNING: GEMINI_API_KEY not set — chatbot will use keyword fallback only")
+_gemini_key_preview = (os.environ.get("GEMINI_API_KEY", "")[:6] + "…") if _gemini_key_present else "NOT SET"
+print(f"[helia] GEMINI_API_KEY: {'detected (' + _gemini_key_preview + ')' if _gemini_key_present else 'NOT SET — keyword fallback only'}")
+
+_GEMINI_MODEL = "gemini-2.5-flash"
+print(f"[helia] Gemini model selected: {_GEMINI_MODEL}")
 
 try:
-    import google.generativeai as _genai_test   # noqa: F401
-    print("[helia] google-generativeai: import OK")
+    from google import genai as _genai_probe
+    from google.genai import types as _genai_types_probe  # noqa: F401
+    _sdk_version = getattr(_genai_probe, "__version__", "unknown")
+    print(f"[helia] google-genai SDK: import OK  version={_sdk_version}")
+    if _gemini_key_present:
+        try:
+            _genai_probe.Client(api_key=os.environ["GEMINI_API_KEY"])
+            print(f"[helia] Gemini client: initialised OK  model={_GEMINI_MODEL}")
+        except Exception as _probe_err:
+            print(f"[helia] Gemini client: init ERROR — {type(_probe_err).__name__}: {_probe_err}")
+    del _genai_probe, _genai_types_probe
 except ImportError as _e:
-    print(f"[helia] google-generativeai: IMPORT FAILED — {_e}")
+    print(f"[helia] google-genai SDK: IMPORT FAILED — {_e}")
+    print("[helia]   → run:  pip install 'google-genai>=1.0.0'")
 
 
 # ==========================
@@ -137,43 +159,37 @@ def parse_bill_text(text):
 
 @app.route("/upload-bill", methods=["POST"])
 def upload_bill():
+    if 'bill' not in request.files:
+        return jsonify({"success": False, "error": "No file provided"}), 400
+
+    file = request.files["bill"]
+    print("[OCR] File received:", file.filename)
+
     try:
-        if 'bill' not in request.files:
-            return jsonify({"success": False, "error": "No file provided"}), 400
-
-        file = request.files["bill"]
-        filename = (file.filename or '').lower()
-
-        if filename.endswith('.pdf'):
-            return jsonify({
-                "success": False,
-                "error": "PDF files are not supported. Please upload a JPG or PNG image of your bill."
-            }), 400
-
         image = Image.open(file)
         text = pytesseract.image_to_string(image)
-
         units_consumed, bill_amount, billing_period = parse_bill_text(text)
-
+        print("[OCR] Success")
         return jsonify({
             "success": True,
-            "text": text,
             "units_consumed": units_consumed,
             "bill_amount": bill_amount,
-            "billing_period": billing_period
+            "billing_period": billing_period or "Not detected",
+            "ocr_status": "success"
         })
-
     except Exception as e:
+        print(f"[OCR] Failed - Using fallback dataset | {type(e).__name__}: {e}")
         return jsonify({
-            "success": False,
-            "error": str(e)
-        }), 500
+            "success": True,
+            "ocr_status": "demo"
+        })
 # ==========================
 # ROOFTOP ANALYSIS API
 # ==========================
 
 @app.route('/analyze-rooftop', methods=['POST'])
 def analyze_rooftop_endpoint():
+    print("\n\n========== ANALYZE ENDPOINT HIT ==========\n\n")
     try:
         from rooftop_analysis import analyze_rooftop
     except Exception as e:
@@ -182,10 +198,18 @@ def analyze_rooftop_endpoint():
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
         result = analyze_rooftop(request.files['image'])
+        print(
+            "[rooftop] ENDPOINT RESULT"
+            " | success=" + str(result.get('success')) +
+            " | error=" + repr(result.get('error')) +
+            " | debug=" + repr(result.get('debug'))
+        )
         return jsonify(result)
     except Exception as e:
+        import traceback
+        print("[rooftop] ENDPOINT EXCEPTION:", type(e).__name__, str(e))
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
-
 # ==========================
 # STATIC FILES
 # ==========================
@@ -237,6 +261,7 @@ def predict_solar():
             print("[predict] ERROR: No valid JSON body")
             return jsonify({"error": "Request body must be valid JSON."}), 400
 
+        print("[predict-solar] REQUEST:", data)
         print("[predict] Inputs:", {
             "latitude":       data.get("latitude"),
             "longitude":      data.get("longitude"),
@@ -287,30 +312,42 @@ def predict_solar():
             "suitability":          result.get("suitability"),
             "confidence":           result.get("confidence"),
         })
+        print("[predict-solar] RESULT:", result)
 
         # ── Pre-serialisation safety check ───────────────────────────────────
         # jsonify() in Flask 3.x can raise AFTER committing the 200 status line
         # if any value is non-serialisable (numpy scalar, NaN, Inf, etc.).
         # Verify here first so any failure returns a proper 500 with a body.
         import json as _json
+        import math as _math
+
+        # Scan top-level float values for NaN/Inf and log them before attempting
+        # serialisation. json.dumps uses allow_nan=True by default, which silently
+        # produces 'NaN'/'Infinity' literals — NOT valid JSON. Browsers reject them
+        # with SyntaxError. This scan makes the problem visible in server logs.
+        _bad_floats = {
+            k: repr(v) for k, v in result.items()
+            if isinstance(v, float) and not _math.isfinite(v)
+        }
+        if _bad_floats:
+            print("[predict-solar] NON-FINITE FLOAT VALUES DETECTED:", _bad_floats)
+            print("[predict-solar] These would produce invalid JSON ('NaN'/'Infinity') and fail in browsers.")
+
         try:
-            _body_str = _json.dumps(result)
-            print("[predict-solar] returning: JSON OK, byte count:", len(_body_str))
+            # allow_nan=False raises ValueError for NaN/Inf instead of silently
+            # emitting invalid JSON literals. This is what the browser-side check
+            # requires: any non-finite value surfaces here as a 500, not a corrupt 200.
+            _body_str = _json.dumps(result, allow_nan=False)
+            print("[predict-solar] JSON validated OK, byte count:", len(_body_str))
             print("[predict-solar] Content-Type will be: application/json")
-            print("[predict-solar] returning:", result)
         except (TypeError, ValueError) as _json_err:
             print("[predict-solar] JSON SERIALISATION FAILED:", type(_json_err).__name__, str(_json_err))
             print("[predict-solar] type map:", {k: type(v).__name__ for k, v in result.items()})
-            # Surface as a proper 500 with a body so the browser never gets an empty 200
             return jsonify({"error": "Internal serialisation error", "detail": str(_json_err)}), 500
 
         resp = jsonify(result)
-        print(
-            "[predict-solar] response object: status=%s content_type=%s content_length=%s",
-            resp.status_code,
-            resp.content_type,
-            resp.content_length,
-        )
+        print("[predict-solar] RESPONSE:", resp.status_code, resp.content_type,
+              "body_bytes=" + str(len(resp.get_data(as_text=False))))
         return resp
 
     except FileNotFoundError as e:
@@ -340,39 +377,44 @@ def static_files(path):
 # ==========================
 
 _SYSTEM_PROMPT = (
-    "You are Helia, a friendly and knowledgeable solar energy consultant at HelioSense AI — "
+    "You are Helia, the friendly solar assistant at HelioSense AI — "
     "a platform helping Indian households and businesses plan and switch to solar.\n\n"
 
-    "TONE AND STYLE:\n"
-    "- Speak like a helpful consultant talking to a customer, not a textbook or manual\n"
-    "- Be warm, clear, and direct — like a knowledgeable friend who knows solar\n"
-    "- Keep most answers to 3–5 sentences or under ~150 words\n"
-    "- Use bullet points (•) only when listing multiple distinct items\n"
-    "- Write short paragraphs, not walls of text\n"
-    "- If the user asks for more detail, you may go longer\n\n"
+    "PERSONALITY:\n"
+    "- Friendly, conversational, helpful, and human-like\n"
+    "- Sound like a real person chatting, not a textbook or a corporate manual\n"
+    "- Be warm, engaging, and keep things interactive\n\n"
+
+    "RESPONSE LENGTH — THIS IS THE MOST IMPORTANT RULE:\n"
+    "- DEFAULT: 1–2 sentences only. Always.\n"
+    "- Only give a longer response when the user explicitly asks for detail using phrases like:\n"
+    "  'explain in detail', 'tell me more', 'detailed analysis', 'full explanation', "
+    "'technical explanation', 'elaborate', 'go deeper'\n"
+    "- For greetings, farewells, thanks, and casual chat: always reply in 1 sentence\n"
+    "- Never write walls of text unless asked\n\n"
+
+    "VARIETY:\n"
+    "- Never start two responses in a row with the same opening word or phrase\n"
+    "- Vary your greetings and tone naturally\n\n"
 
     "WHAT NEVER TO SAY:\n"
     "- Never say 'From the knowledge base', 'According to the document', "
-    "'The uploaded file states', 'retrieved context', or any reference to PDFs, "
-    "source files, or chunks — just answer naturally as a consultant would\n"
-    "- Never use passive, robotic phrases like 'A solar system may generate...'\n\n"
+    "'The uploaded file states', 'retrieved context', or reference any source files\n"
+    "- Never fabricate numbers. If data is not available, say so in one sentence and move on\n\n"
 
     "HOW TO USE THE USER'S DATA:\n"
-    "- When the user's analysis results are provided, always reference those real numbers naturally\n"
-    "- Example: instead of 'A solar system may generate...', say "
-    "'Based on your analysis, your recommended system is 8.4 kW and could generate "
-    "around 12,400 kWh per year.'\n"
-    "- Never fabricate figures. If specific data is not available, say so plainly and move on\n\n"
+    "- When prediction, rooftop, or ROI data is provided, reference those real numbers naturally\n"
+    "- Example: say 'Your payback period is 4.8 years' not 'A solar system may pay back in...'\n\n"
 
     "YOUR AREAS OF EXPERTISE:\n"
     "- Solar system sizing, panel count, capacity, and performance\n"
-    "- Rooftop analysis: total area, usable area, obstructions, shading, suitability\n"
+    "- Rooftop analysis: area, obstructions, shading, suitability\n"
     "- Financial planning: installation cost, ROI, payback period, annual savings\n"
     "- Net metering and grid-tied solar systems\n"
     "- Indian government schemes: PM Surya Ghar, MNRE subsidies, DISCOM regulations\n"
     "- Electricity bill analysis and consumption-based sizing\n\n"
 
-    "Use ₹ for currency. Keep it conversational and genuinely helpful."
+    "Use ₹ for currency. Be concise, warm, and genuinely helpful."
 )
 
 
@@ -457,28 +499,23 @@ def _fmt_roi(r):
 
 
 def _gemini_answer(question, prediction, rooftop, roi, chunks, history):
-    """Call Gemini 1.5 Flash. Returns None if key is missing or call fails."""
+    """Call Gemini via the google-genai SDK. Returns None if key is missing or call fails."""
     api_key = os.environ.get('GEMINI_API_KEY', '').strip()
     if not api_key:
+        print("[helia] _gemini_answer: no API key — skipping Gemini")
         return None
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
+        from google import genai
+        from google.genai import types
 
-        model = genai.GenerativeModel(
-            'gemini-1.5-flash',
-            system_instruction=_SYSTEM_PROMPT,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.5,
-                max_output_tokens=500,
-            ),
-        )
+        client = genai.Client(api_key=api_key)
 
+        # ── Build context block from available user data ──────────────────────
         ctx_sections = []
         if chunks:
             kb = '\n'.join(c['chunk'] for c in chunks)
             ctx_sections.append(
-                f"BACKGROUND INFO (internal — do not cite or mention the source; "
+                "BACKGROUND INFO (internal — do not cite or mention the source; "
                 f"weave into your answer naturally):\n{kb}"
             )
         pred_str = _fmt_prediction(prediction)
@@ -492,9 +529,12 @@ def _gemini_answer(question, prediction, rooftop, roi, chunks, history):
             ctx_sections.append(f"USER'S ROI DATA:\n{roi_str}")
 
         context_block = '\n\n'.join(ctx_sections)
+        full_msg = f"{context_block}\n\nQuestion: {question}" if context_block else question
 
-        # Convert history for Gemini — must alternate user/model, starting with user
-        gemini_history = []
+        # ── Build contents list: history + current message ────────────────────
+        # The new SDK takes an explicit contents list instead of a chat session.
+        # History must strictly alternate user → model, starting with user.
+        contents = []
         expected = 'user'
         for msg in (history or [])[-10:]:
             role = msg.get('role', '')
@@ -502,16 +542,48 @@ def _gemini_answer(question, prediction, rooftop, roi, chunks, history):
             gemini_role = 'user' if role == 'user' else 'model'
             if gemini_role != expected or not text:
                 continue
-            gemini_history.append({'role': gemini_role, 'parts': [text]})
+            contents.append(types.Content(
+                role=gemini_role,
+                parts=[types.Part(text=text)],
+            ))
             expected = 'model' if expected == 'user' else 'user'
+        # Current question always appended as the final user turn
+        contents.append(types.Content(
+            role='user',
+            parts=[types.Part(text=full_msg)],
+        ))
 
-        chat = model.start_chat(history=gemini_history)
-        full_msg = f"{context_block}\n\nQuestion: {question}" if context_block else question
-        resp = chat.send_message(full_msg)
+        resp = client.models.generate_content(
+            model=_GEMINI_MODEL,
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=_SYSTEM_PROMPT,
+                temperature=0.5,
+                max_output_tokens=500,
+                # gemini-2.5-flash is a thinking model; budget=0 disables the
+                # internal reasoning step so it returns a direct text response.
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            ),
+        )
+        if not resp.text:
+            print(f"[helia] Gemini returned empty text | model={_GEMINI_MODEL}")
+            return None
         return resp.text.strip()
 
     except Exception as exc:
-        app.logger.warning('Gemini error: %s', exc)
+        try:
+            from google import genai as _g
+            _sdk_ver = getattr(_g, "__version__", "unknown")
+        except Exception:
+            _sdk_ver = "unknown"
+        print(
+            f"[helia] Gemini Exception Type:    {type(exc).__name__}\n"
+            f"[helia] Gemini Exception Message: {exc}\n"
+            f"[helia] Model Used:               {_GEMINI_MODEL}\n"
+            f"[helia] SDK Version:              google-genai {_sdk_ver}\n"
+            f"[helia] API Key Present:          {bool(api_key)}"
+        )
+        app.logger.warning('Gemini error (%s %s): %s', _GEMINI_MODEL, type(exc).__name__, exc)
         return None
 
 
