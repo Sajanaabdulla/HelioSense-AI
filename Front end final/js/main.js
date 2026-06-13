@@ -3,6 +3,7 @@
  */
 (function () {
   'use strict';
+  console.log('[energy] main.js loaded');
 
   function initHeaderScroll() {
     var header = document.querySelector('.site-header');
@@ -685,10 +686,10 @@
     initModal('report-modal', ['view-report-btn'], 'close-modal');
     initRangeLabels();
     initSmoothAnchors();
-    initEnergyUsage();
+    if (!window._heliaSenseEnergyModule) initEnergyUsage();
     initChatbot();
     initSolarPrediction();
-    initAnalysis();
+    if (typeof initAnalysis === 'function') initAnalysis();
     initAuthForms();
     initUserProfile();
     populateReportSummary();
@@ -718,12 +719,13 @@ var CITY_COORDS = {
 };
 
 function initSolarPrediction() {
+  console.log("hostname:", location.hostname);
   var _host = window.location.hostname;
   var API_BASE_URL =
     (_host === "127.0.0.1" || _host === "localhost")
       ? "http://127.0.0.1:5000"
       : "https://heliosense-ai-1.onrender.com";
-  console.log('[prediction] API_BASE_URL:', API_BASE_URL);
+  console.log("API_BASE_URL:", API_BASE_URL);
   console.log('[prediction] hostname:', _host);
 
   // Get DOM elements

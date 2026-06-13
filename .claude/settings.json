@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(python predict.py)",
+      "PowerShell(& \"c:\\\\HelioSense Ai\\\\.venv\\\\Scripts\\\\pip.exe\" show google-generativeai 2>$null)",
+      "PowerShell(& \"c:\\\\HelioSense Ai\\\\.venv\\\\Scripts\\\\pip.exe\" show google-genai 2>$null)"
     ]
   }
 }
