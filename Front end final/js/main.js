@@ -252,7 +252,7 @@
   const API_BASE_URL =
     (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost")
       ? "http://127.0.0.1:5000"
-      : "https://heliosense-ai-1.onrender.com";
+      : "https://heliosense-ai.onrender.com";
   const CHAT_ENDPOINT = `${API_BASE_URL}/chat-query`;
 
   function logDebug(label, value) {
