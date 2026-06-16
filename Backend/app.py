@@ -11,15 +11,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-print("ENV KEY =", os.getenv("GEMINI_API_KEY"))
-
-
-print("RUNNING FILE =", os.path.abspath(__file__))
+print("[startup] RUNNING FILE =", os.path.abspath(__file__))
 
 # Use TESSERACT_CMD env var on Linux/Render; fall back to system PATH default
-import pytesseract
-
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
 
 app = Flask(__name__)
@@ -70,8 +64,46 @@ def method_not_allowed(e):
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
+# In Docker (build context = Backend/), WORKDIR=/app so the parent is the
+# filesystem root — not the repo root.  Try sibling paths as fallbacks.
+if not os.path.exists(FRONTEND_FOLDER):
+    for _candidate in [
+        os.path.join(BASE_DIR, "frontend"),
+        os.path.join(BASE_DIR, "..", "frontend"),
+        "/app/frontend",
+    ]:
+        if os.path.exists(_candidate):
+            FRONTEND_FOLDER = _candidate
+            break
 
-# ── Startup diagnostics ───────────────────────────────────────────────────────
+# ── Startup path diagnostics ─────────────────────────────────────────────────
+print("\n" + "=" * 60)
+print("[startup] HelioSense AI Backend starting up")
+print(f"[startup] CWD        : {os.getcwd()}")
+print(f"[startup] BASE_DIR   : {BASE_DIR}")
+_sm_path   = os.path.join(BASE_DIR, "models", "solar_model.pkl")
+_sm_alt    = os.path.join(BASE_DIR, "solar_model.pkl")
+_cl_path   = os.path.join(BASE_DIR, "models", "climatology.pkl")
+_yolo_path = os.path.abspath(
+    os.path.join(BASE_DIR, "..", "runs", "detect", "train-2", "weights", "best.pt")
+)
+print(f"[startup] solar_model: {_sm_path} → {'EXISTS' if os.path.exists(_sm_path) else 'MISSING'}")
+print(f"[startup] solar_alt  : {_sm_alt} → {'EXISTS' if os.path.exists(_sm_alt) else 'MISSING'}")
+print(f"[startup] climatology: {_cl_path} → {'EXISTS' if os.path.exists(_cl_path) else 'MISSING'}")
+print(f"[startup] YOLO model : {_yolo_path} → {'EXISTS' if os.path.exists(_yolo_path) else 'MISSING (OpenCV-only mode)'}")
+print(f"[startup] Frontend   : {FRONTEND_FOLDER} → {'EXISTS' if os.path.exists(FRONTEND_FOLDER) else 'MISSING (HTML routes disabled)'}")
+try:
+    import shutil as _shutil
+    _tess_binary = _shutil.which("tesseract")
+    print(f"[startup] Tesseract  : {_tess_binary if _tess_binary else 'NOT FOUND (OCR falls back to demo mode)'}")
+    del _shutil, _tess_binary
+except Exception as _te:
+    print(f"[startup] Tesseract  : check failed ({_te})")
+print(f"[startup] GEMINI_KEY : {'SET' if os.environ.get('GEMINI_API_KEY') else 'NOT SET — chatbot uses keyword fallback'}")
+print("=" * 60 + "\n")
+del _sm_path, _sm_alt, _cl_path, _yolo_path
+
+# ── Gemini / SDK startup diagnostics ─────────────────────────────────────────
 _gemini_key_present = bool(os.environ.get("GEMINI_API_KEY", "").strip())
 _gemini_key_preview = (os.environ.get("GEMINI_API_KEY", "")[:6] + "…") if _gemini_key_present else "NOT SET"
 print(f"[helia] GEMINI_API_KEY: {'detected (' + _gemini_key_preview + ')' if _gemini_key_present else 'NOT SET — keyword fallback only'}")
@@ -97,51 +129,66 @@ except ImportError as _e:
 
 
 # ==========================
+# FRONTEND HELPER
+# ==========================
+
+def _send_page(filename):
+    """Serve an HTML file from FRONTEND_FOLDER; return JSON 404 when folder is absent."""
+    if not os.path.exists(FRONTEND_FOLDER):
+        return jsonify({
+            "error": "Frontend is deployed at a separate URL",
+            "frontend_url": "https://heliosense-ai-1.onrender.com",
+            "missing_folder": FRONTEND_FOLDER,
+        }), 404
+    return send_from_directory(FRONTEND_FOLDER, filename)
+
+
+# ==========================
 # WEBSITE ROUTES
 # ==========================
 
 @app.route('/')
 def home():
-    return send_from_directory(FRONTEND_FOLDER, 'index.html')
+    return _send_page('index.html')
 
 @app.route('/login')
 def login():
-    return send_from_directory(FRONTEND_FOLDER, 'login.html')
+    return _send_page('login.html')
 
 @app.route('/register')
 def register():
-    return send_from_directory(FRONTEND_FOLDER, 'register.html')
+    return _send_page('register.html')
 
 @app.route('/dashboard')
 def dashboard():
-    return send_from_directory(FRONTEND_FOLDER, 'dashboard.html')
+    return _send_page('dashboard.html')
 
 @app.route('/analysis')
 def analysis():
-    return send_from_directory(FRONTEND_FOLDER, 'analysis.html')
+    return _send_page('analysis.html')
 
 @app.route('/energy')
 @app.route('/energy.html')
 @app.route('/energy-usage')
 @app.route('/energy-usage.html')
 def energy():
-    return send_from_directory(FRONTEND_FOLDER, 'energy-usage.html')
+    return _send_page('energy-usage.html')
 
 @app.route('/prediction')
 def prediction_page():
-    return send_from_directory(FRONTEND_FOLDER, 'prediction.html')
+    return _send_page('prediction.html')
 
 @app.route('/roi')
 def roi():
-    return send_from_directory(FRONTEND_FOLDER, 'roi.html')
+    return _send_page('roi.html')
 
 @app.route('/reports')
 def reports():
-    return send_from_directory(FRONTEND_FOLDER, 'reports.html')
+    return _send_page('reports.html')
 
 @app.route('/chatbot')
 def chatbot():
-    return send_from_directory(FRONTEND_FOLDER, 'chatbot.html')
+    return _send_page('chatbot.html')
 
 @app.route("/debug")
 def debug():
@@ -151,6 +198,67 @@ def debug():
         "exists": os.path.exists(FRONTEND_FOLDER),
         "files": os.listdir(FRONTEND_FOLDER) if os.path.exists(FRONTEND_FOLDER) else []
     })
+
+
+@app.route("/deployment-debug")
+def deployment_debug():
+    import sys
+    import platform
+    import shutil
+
+    _sm     = os.path.join(BASE_DIR, "models", "solar_model.pkl")
+    _sm_alt = os.path.join(BASE_DIR, "solar_model.pkl")
+    _cl     = os.path.join(BASE_DIR, "models", "climatology.pkl")
+    _yl     = os.path.abspath(
+        os.path.join(BASE_DIR, "..", "runs", "detect", "train-2", "weights", "best.pt")
+    )
+
+    try:
+        _app_files = sorted(os.listdir("/app"))
+    except Exception as _e:
+        _app_files = [f"error listing /app: {_e}"]
+
+    try:
+        import psutil
+        _mem = psutil.virtual_memory()
+        _mem_info = {
+            "total_mb": round(_mem.total / 1e6),
+            "available_mb": round(_mem.available / 1e6),
+            "percent_used": _mem.percent,
+        }
+    except ImportError:
+        _mem_info = "psutil not installed"
+    except Exception as _e:
+        _mem_info = f"error: {_e}"
+
+    return jsonify({
+        "cwd": os.getcwd(),
+        "base_dir": BASE_DIR,
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "files_in_app": _app_files,
+        "models_exists": os.path.exists(_sm),
+        "solar_model_exists": os.path.exists(_sm) or os.path.exists(_sm_alt),
+        "solar_model_path": _sm,
+        "solar_model_alt_exists": os.path.exists(_sm_alt),
+        "climatology_exists": os.path.exists(_cl),
+        "climatology_path": _cl,
+        "yolo_exists": os.path.exists(_yl),
+        "yolo_path": _yl,
+        "frontend_exists": os.path.exists(FRONTEND_FOLDER),
+        "frontend_folder": FRONTEND_FOLDER,
+        "tesseract_cmd": getattr(pytesseract.pytesseract, "tesseract_cmd", "unknown"),
+        "tesseract_binary": shutil.which("tesseract"),
+        "env_vars": {
+            "PORT": os.environ.get("PORT"),
+            "TESSERACT_CMD": os.environ.get("TESSERACT_CMD"),
+            "GEMINI_API_KEY_SET": bool(os.environ.get("GEMINI_API_KEY")),
+            "PYTHON_ENV": os.environ.get("PYTHON_ENV"),
+        },
+        "memory_info": _mem_info,
+    })
+
+
 def parse_bill_text(text):
     units_consumed = None
     bill_amount = None
@@ -202,29 +310,40 @@ def parse_bill_text(text):
 
 @app.route("/upload-bill", methods=["POST"])
 def upload_bill():
+    print("[OCR] REQUEST RECEIVED")
     if 'bill' not in request.files:
         return jsonify({"success": False, "error": "No file provided"}), 400
 
     file = request.files["bill"]
-    print("[OCR] File received:", file.filename)
+    print("[OCR] FILE RECEIVED:", file.filename)
 
     try:
+        print("[OCR] ANALYSIS STARTED")
         image = Image.open(file)
         text = pytesseract.image_to_string(image)
         units_consumed, bill_amount, billing_period = parse_bill_text(text)
-        print("[OCR] Success")
-        return jsonify({
+        print("[OCR] ANALYSIS COMPLETED")
+        result = {
             "success": True,
             "units_consumed": units_consumed,
             "bill_amount": bill_amount,
             "billing_period": billing_period or "Not detected",
-            "ocr_status": "success"
-        })
+            "ocr_status": "success",
+        }
+        print("[OCR] RETURNING JSON")
+        return jsonify(result)
+    except FileNotFoundError as e:
+        print(f"[OCR] FileNotFoundError: {e}")
+        return jsonify({
+            "success": False,
+            "error": "File not found",
+            "missing_file": str(e),
+        }), 500
     except Exception as e:
-        print(f"[OCR] Failed - Using fallback dataset | {type(e).__name__}: {e}")
+        print(f"[OCR] Failed ({type(e).__name__}: {e}) — returning demo mode")
         return jsonify({
             "success": True,
-            "ocr_status": "demo"
+            "ocr_status": "demo",
         })
 # ==========================
 # ROOFTOP ANALYSIS API
@@ -232,10 +351,18 @@ def upload_bill():
 
 @app.route('/analyze-rooftop', methods=['POST'])
 def analyze_rooftop_endpoint():
-    print("\n\n========== ANALYZE ENDPOINT HIT ==========\n\n")
+    print("[rooftop] REQUEST RECEIVED")
     try:
         try:
             from rooftop_analysis import analyze_rooftop
+            print("[rooftop] MODEL LOADED (rooftop_analysis module imported)")
+        except FileNotFoundError as e:
+            print("[rooftop] FileNotFoundError during module import:", str(e))
+            return jsonify({
+                "success": False,
+                "error": "File not found",
+                "missing_file": str(e),
+            }), 503
         except Exception as e:
             print("[rooftop] Module import failed:", type(e).__name__, str(e))
             return jsonify({'success': False, 'error': 'Analysis module unavailable: ' + str(e)}), 503
@@ -243,7 +370,10 @@ def analyze_rooftop_endpoint():
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
 
+        print("[rooftop] FILES RECEIVED:", request.files['image'].filename)
+        print("[rooftop] ANALYSIS STARTED")
         result = analyze_rooftop(request.files['image'])
+        print("[rooftop] ANALYSIS COMPLETED")
 
         if not isinstance(result, dict):
             print("[rooftop] analyze_rooftop() returned non-dict:", type(result).__name__, repr(result))
@@ -255,8 +385,16 @@ def analyze_rooftop_endpoint():
             " | error=" + repr(result.get('error')) +
             " | debug=" + repr(result.get('debug'))
         )
+        print("[rooftop] RETURNING JSON")
         return jsonify(_safe_json_value(result))
 
+    except FileNotFoundError as e:
+        print("[rooftop] FileNotFoundError:", str(e))
+        return jsonify({
+            "success": False,
+            "error": "File not found",
+            "missing_file": str(e),
+        }), 500
     except Exception as e:
         import traceback
         print("[rooftop] ENDPOINT EXCEPTION:", type(e).__name__, str(e))
@@ -306,7 +444,7 @@ def health():
 def predict_solar():
 
     try:
-        print("[predict] PREDICT-SOLAR REQUEST RECEIVED")
+        print("[predict-solar] REQUEST RECEIVED")
         data = request.get_json(force=True, silent=True)
 
         if data is None:
@@ -366,7 +504,7 @@ def predict_solar():
         })
 
         safe_result = _safe_json_value(result)
-        print("[predict-solar] Serialised OK, returning 200")
+        print("[predict-solar] RETURNING JSON (200)")
         return jsonify(safe_result)
 
     except FileNotFoundError as e:
