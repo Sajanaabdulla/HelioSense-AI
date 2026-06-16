@@ -25,6 +25,49 @@ pytesseract.pytesseract.tesseract_cmd = os.environ.get("TESSERACT_CMD", "tessera
 app = Flask(__name__)
 CORS(app)
 
+
+def _safe_json_value(obj):
+    """Recursively convert numpy types and non-finite floats to JSON-safe Python types.
+    Prevents jsonify() from emitting invalid NaN/Infinity literals that browsers reject."""
+    try:
+        import numpy as np
+        import math
+        if isinstance(obj, dict):
+            return {k: _safe_json_value(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [_safe_json_value(v) for v in obj]
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            v = float(obj)
+            return None if not math.isfinite(v) else v
+        if isinstance(obj, np.ndarray):
+            return [_safe_json_value(v) for v in obj.tolist()]
+        if isinstance(obj, float) and not math.isfinite(obj):
+            return None
+        return obj
+    except Exception:
+        return str(obj)
+
+
+@app.errorhandler(Exception)
+def handle_unhandled_exception(e):
+    """Global catch-all: ensures every unhandled error returns JSON, never HTML."""
+    import traceback
+    print(f"[app] UNHANDLED EXCEPTION: {type(e).__name__}: {e}")
+    traceback.print_exc()
+    return jsonify({"success": False, "error": "Internal server error", "detail": str(e)}), 500
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"success": False, "error": "Not found"}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"success": False, "error": "Method not allowed"}), 405
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_FOLDER = os.path.join(BASE_DIR, "..", "Front end final")
 
@@ -191,20 +234,29 @@ def upload_bill():
 def analyze_rooftop_endpoint():
     print("\n\n========== ANALYZE ENDPOINT HIT ==========\n\n")
     try:
-        from rooftop_analysis import analyze_rooftop
-    except Exception as e:
-        return jsonify({'success': False, 'error': 'Analysis module unavailable: ' + str(e)}), 503
-    try:
+        try:
+            from rooftop_analysis import analyze_rooftop
+        except Exception as e:
+            print("[rooftop] Module import failed:", type(e).__name__, str(e))
+            return jsonify({'success': False, 'error': 'Analysis module unavailable: ' + str(e)}), 503
+
         if 'image' not in request.files:
             return jsonify({'success': False, 'error': 'No image file provided'}), 400
+
         result = analyze_rooftop(request.files['image'])
+
+        if not isinstance(result, dict):
+            print("[rooftop] analyze_rooftop() returned non-dict:", type(result).__name__, repr(result))
+            return jsonify({'success': False, 'error': 'Analysis returned unexpected result type'}), 500
+
         print(
-            "[rooftop] ENDPOINT RESULT"
+            "[rooftop] RESULT"
             " | success=" + str(result.get('success')) +
             " | error=" + repr(result.get('error')) +
             " | debug=" + repr(result.get('debug'))
         )
-        return jsonify(result)
+        return jsonify(_safe_json_value(result))
+
     except Exception as e:
         import traceback
         print("[rooftop] ENDPOINT EXCEPTION:", type(e).__name__, str(e))
@@ -241,10 +293,10 @@ def assets_files(filename):
 
 @app.route("/health")
 def health():
-    return {
+    return jsonify({
         "status": "ok",
         "service": "Helia AI Backend"
-    }
+    })
 
 # ==========================
 # SOLAR PREDICTION API
@@ -312,43 +364,10 @@ def predict_solar():
             "suitability":          result.get("suitability"),
             "confidence":           result.get("confidence"),
         })
-        print("[predict-solar] RESULT:", result)
 
-        # ── Pre-serialisation safety check ───────────────────────────────────
-        # jsonify() in Flask 3.x can raise AFTER committing the 200 status line
-        # if any value is non-serialisable (numpy scalar, NaN, Inf, etc.).
-        # Verify here first so any failure returns a proper 500 with a body.
-        import json as _json
-        import math as _math
-
-        # Scan top-level float values for NaN/Inf and log them before attempting
-        # serialisation. json.dumps uses allow_nan=True by default, which silently
-        # produces 'NaN'/'Infinity' literals — NOT valid JSON. Browsers reject them
-        # with SyntaxError. This scan makes the problem visible in server logs.
-        _bad_floats = {
-            k: repr(v) for k, v in result.items()
-            if isinstance(v, float) and not _math.isfinite(v)
-        }
-        if _bad_floats:
-            print("[predict-solar] NON-FINITE FLOAT VALUES DETECTED:", _bad_floats)
-            print("[predict-solar] These would produce invalid JSON ('NaN'/'Infinity') and fail in browsers.")
-
-        try:
-            # allow_nan=False raises ValueError for NaN/Inf instead of silently
-            # emitting invalid JSON literals. This is what the browser-side check
-            # requires: any non-finite value surfaces here as a 500, not a corrupt 200.
-            _body_str = _json.dumps(result, allow_nan=False)
-            print("[predict-solar] JSON validated OK, byte count:", len(_body_str))
-            print("[predict-solar] Content-Type will be: application/json")
-        except (TypeError, ValueError) as _json_err:
-            print("[predict-solar] JSON SERIALISATION FAILED:", type(_json_err).__name__, str(_json_err))
-            print("[predict-solar] type map:", {k: type(v).__name__ for k, v in result.items()})
-            return jsonify({"error": "Internal serialisation error", "detail": str(_json_err)}), 500
-
-        resp = jsonify(result)
-        print("[predict-solar] RESPONSE:", resp.status_code, resp.content_type,
-              "body_bytes=" + str(len(resp.get_data(as_text=False))))
-        return resp
+        safe_result = _safe_json_value(result)
+        print("[predict-solar] Serialised OK, returning 200")
+        return jsonify(safe_result)
 
     except FileNotFoundError as e:
         print("[predict-solar] returning: FileNotFoundError —", str(e))
